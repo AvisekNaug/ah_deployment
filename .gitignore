@@ -1,0 +1,14 @@
+# extensions
+*.pyc
+.ipynb_checkpoints
+*.ipynb
+
+# folders
+__pycache__
+/.ipynb_checkpoints
+/.vscode/
+*local*
+/data/raw
+alumnivenv/
+
+# custom
