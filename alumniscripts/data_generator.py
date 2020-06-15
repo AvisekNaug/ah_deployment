@@ -6,6 +6,6 @@ execute the following step in order
     b. Clean the data, process(aggregation, smoothing etc) it
     c. Store the data in a suitable format  # maintain time stamp information
     Whenever lstm_train_data_lock is free, do in a never-ending loop
-    d. create lstm related data for the last 3 months + 1 week
-    e. create environment related data for last 3 months + 1 week over same period
+    d. read the stored file and create lstm related data for the last 3 months + 1 week
+    e. read the stored file and create environment related data for last 3 months + 1 week over same period
 """
