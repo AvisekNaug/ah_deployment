@@ -442,3 +442,5 @@ def removeoutliers(df, columns: list, **kwargs):
 	print("Retaining {}% of the data".format(100*df.shape[0]/org_shape))
 
 	return df
+
+

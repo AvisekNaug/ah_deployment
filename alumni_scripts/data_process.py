@@ -1,25 +1,29 @@
 """
 This script will have methods/Threads that help create data for different other threads
-1. pull_data: This method will acquire data using BdX API
+1. pull_offline_data: This method will acquire data using BdX API
 
-2. offline_data_process: This method is used to create data for off-line learning. It will 
+2. offline_data_clean: This method is used to create data for off-line learning. It will 
 execute the following step in order
-a. Get the raw data from multiple sources
-b. Clean the data, process(aggregation, smoothing etc) it
+a. Get the raw data from multiple sources eg csv files
+b. Clean the data
 c. Store the data in a suitable format  # maintain time stamp information - TSDB
 
-3. data_stats: Create statistics for the data to be used for processing data online
 """
 
 # imports
 import numpy as np
 import pandas as pd
+import json
 
 from bdx import get_trend
 from datetime import datetime, timezone, timedelta
 
 
-def pull_data(*args, **kwargs):
+# acquire data using BdX API
+def pull_offline_data(*args, **kwargs):
+	"""
+	This method pulls data from the Niagara Networks using the BdX API
+	"""
 
 	# tz_utc = timezone(offset=-timedelta(hours=0))
 	tz_central = timezone(offset=-timedelta(hours=6))
@@ -36,3 +40,21 @@ def pull_data(*args, **kwargs):
 						  end=end)
 
 	dataframe.to_csv(kwargs['save_path'])
+
+
+# get data stats from raw data: 
+def offline_batch_data_clean(*args, **kwargs):
+	"""
+	remove outliers from offline batch data
+	"""
+	with open(kwargs['meta_data_path'], 'r') as fp:
+		meta_data = json.load(fp)
+
+	# Perform 2 standard deviation based thresholding
+
+
+# online data clean
+def online_data_clean(*args, **kwargs):
+
+	pass
+
