@@ -1,7 +1,6 @@
 # extensions
 *.pyc
 .ipynb_checkpoints
-*.ipynb
 
 # folders
 __pycache__
