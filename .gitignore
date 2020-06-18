@@ -10,5 +10,6 @@ __pycache__
 *local*
 /data/raw
 alumnivenv/
-
+raw_data
+auths.json
 # custom
