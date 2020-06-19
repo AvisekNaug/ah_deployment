@@ -444,3 +444,42 @@ def removeoutliers(df, columns: list, **kwargs):
 	return df
 
 
+# plot a data frame
+def dataframeplot(df, lazy = True, style = 'b--', ylabel : str = 'Y-axis', xlabel : str = 'X-axis', legend = False):
+	"""Inspects all the rows of data in one or separate plots
+	
+	Arguments:
+		df {pd.DataFrame} -- The dataframe to plot
+	
+	Keyword Arguments:
+		lazy {bool} -- If true, single plot object plots all columns. Preferably set to false for plotting
+		 many columns(default: {True})
+		style {str} -- type of line (default: {'*'})
+		ylabel {str} -- label for yaxis (default: {'Y-axis'})
+		xlabel {str} -- label for xaxis (default: {'X-axis'})
+		legend {bool} -- whether we want ot see legends. Turned off for many columns (default: {False})
+	"""
+
+	df_dates = df.index
+	dates_num = date2num(list(df_dates))
+
+
+
+	if not lazy:
+		width, height = 20, int(df.shape[1]*3)
+		plt.rcParams["figure.figsize"] = (width, height)
+		font = {'family': "Times New Roman"}
+		plt.rc('font', **font)
+		_, ax = plt.subplots(nrows = df.shape[1], squeeze=False, constrained_layout=True)
+		for i,j in zip(df.columns,range(df.shape[1])):
+			#df.plot(y=[i],ax=ax[j][0],style=[style], legend=legend)
+			ax[j][0].plot_date(dates_num, df[i], style, label=i)
+			ax[j][0].set_xlabel(xlabel)
+			ax[j][0].set_ylabel(i)
+			ax[j][0].legend(prop={'size':14})
+		plt.show()
+	else:
+		ax = df.plot(y=df.columns, figsize=(20,7), legend=legend, style = [style]*df.shape[1])
+		ax.set_xlabel(xlabel)
+		ax.set_ylabel(ylabel)
+		plt.show()
