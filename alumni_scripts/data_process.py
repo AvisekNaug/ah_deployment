@@ -19,6 +19,8 @@ from bdx import get_trend
 from datetime import datetime, timezone, timedelta
 
 
+
+
 # acquire data using BdX API
 def pull_offline_data(*args, **kwargs):
 	"""
@@ -48,9 +50,29 @@ def offline_batch_data_clean(*args, **kwargs):
 	remove outliers from offline batch data
 	"""
 	with open(kwargs['meta_data_path'], 'r') as fp:
-		meta_data = json.load(fp)
+		meta_data_ = json.load(fp)
+	meta_data = meta_data_.copy()
+	for key, value in meta_data_['column_stats'].items():
+		if value['std'] == 0:
+			meta_data['column_stats'][key]['std'] = 0.0001  # add small std for constant values
+	stats = pd.DataFrame(meta_data['column_stats'])
 
 	# Perform 2 standard deviation based thresholding
+	df = kwargs['df'].copy()
+	faulty_idx = np.abs(df-stats.loc['mean',:]) >= (2*stats.loc['std',:])
+
+	retain = False
+	if retain:
+		for col_name in df.columns:
+			#df.loc[faulty_idx[col_name], col_name] = stats.loc['mean', col_name]  # set to mean
+			t = (np.sign(df - stats.loc['mean', :]).loc[faulty_idx[col_name], col_name] *
+			 2 *stats.loc['std', col_name]) + stats.loc['mean', col_name]
+			df.loc[faulty_idx[col_name], col_name] = t  # set to upper or lower 2*std bound
+											
+	else:
+		df = df[~faulty_idx]  # keep rows which are within bounds
+
+	return df
 
 
 # online data clean
