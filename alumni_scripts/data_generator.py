@@ -1,7 +1,7 @@
 """
 This script will have methods/Threads that help create data for different other threads
-1. offline_lstm_data_gen:
-	Whenever lstm_train_data_lock is free, do in a never-ending loop
+1. offline_data_gen:
+	Whenever lstm_train_data_lock, env_train_data_lock is free, do in a never-ending loop
 	a. read the stored file and create lstm related data for the last 3 months + 1 week
 	b. read the stored file and create environment related data for last 3 months + 1 week over same period
 	* This method needs to know a timestamp as an input based on which it will get data from offline database.
@@ -10,9 +10,62 @@ This script will have methods/Threads that help create data for different other 
 
 # imports
 import numpy as np
+from datetime import datetime, timedelta
+from influxdb import DataFrameClient
+
+import alumni_data_utils as a_utils
 
 
-def offline_lstm_data_gen(*args, **kwargs):
+def offline_data_gen(*args, **kwargs):
+
+
 
 	time_stamp = kwargs['time_stamp']
+	# Events
+	lstm_data_available = kwargs['lstm_data_available']  # new data available for lstm relearning
+	env_data_available = kwargs['env_data_available']  # new data available for env relearning
+	# Locks
+	lstm_train_data_lock = kwargs['lstm_data_read_lock']  # prevent dataloop from writing data
+	env_train_data_lock = kwargs['env_data_read_lock']  # prevent dataloop from writing data
+
+	client = DataFrameClient(host='localhost', port=8086, database=kwargs['database'],)
+
+	while True:
+		if not lstm_data_available.is_set():
+			result_obj = client.query("select * from alumni_data_v1 where time >= '{}' - 13w \
+    							and time < '{}'".format(kwargs['t_start'], kwargs['t_start']))
+
+			data_gen_process_cwe( **{ 'df' : result_obj['alumni_data_v1'].loc[:,kwargs['cwe_vars']],
+			  'agg': kwargs['agg'], 'smoothing' : kwargs['smoothing']  } )
+			data_gen_process_hwe( **{ 'df' : result_obj['alumni_data_v1'].loc[:,kwargs['hwe_vars']],
+			  'agg': kwargs['agg'], 'smoothing' : kwargs['smoothing']  } )
+			data_gen_process_vlv( **{ 'df' : result_obj['alumni_data_v1'].loc[:,kwargs['vlv_vars']],
+			  'agg': kwargs['agg'], 'smoothing' : kwargs['smoothing']  } )
+			
+		
+		time_stamp += timedelta(days=kwargs['relearn_interval_days'])
+
+def data_gen_process_cwe(*args, **kwargs):
 	
+	# read the data from the database
+	df = kwargs['df'].copy()
+	# smooth the data
+	df = a_utils.dfsmoothing(df=df, column_names=list(df.columns), **kwargs['smoothing'])
+	df.clip(lower=0) # Remove <0 values for all columns as a result of smoothing
+	# aggregate data
+	rolling_sum_target, rolling_mean_target = [], []
+	for key, value in kwargs['agg'].items():
+		if value == 'sum': rolling_sum_target.append(key)
+		else: rolling_mean_target.append(key)
+	df[rolling_sum_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_sum_target)
+	df[rolling_mean_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_sum_target)
+
+	pass
+
+def data_gen_process_hwe(*args, **kwargs):
+	
+	pass
+
+def data_gen_process_vlv(*args, **kwargs):
+	
+	pass

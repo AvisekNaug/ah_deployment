@@ -483,3 +483,91 @@ def dataframeplot(df, lazy = True, style = 'b--', ylabel : str = 'Y-axis', xlabe
 		ax.set_xlabel(xlabel)
 		ax.set_ylabel(ylabel)
 		plt.show()
+
+
+# smooth the data
+def dfsmoothing(df, 
+				column_names: list = [], 
+				order: int = 5, 
+				Wn: Union[list, float] = 0.015,
+				T : Union[int,float]= 300):
+	"""Smoothes the dataframe columns using butterworth smoothing
+	
+	Arguments:
+		df {pd.DataFrame} -- the input datafrme
+	
+	Keyword Arguments:
+		column_names {list} -- list of column names to be smoothed (default: {None})
+		order {int} -- Order of the filter (default: {5})
+		Wn {Union[list, float]} -- Cutoff frequency (default: {0.015})
+		T {Union[int, float]} -- sampling period of the signal in seconds (default: {300})
+	
+	Returns:
+		pd.DataFrame -- smoothed data frame
+	"""
+
+	if not column_names:
+
+		return df
+
+	else:
+
+		# prevent modifying original dataframe
+		df2 = df.copy()
+		# sample rate
+		fs = 1/T
+		# nyquist frequency
+		nyq = 0.5 * fs
+		# make a list in case cutoff is scalar
+		if not isinstance(Wn, list):
+			Wn = [Wn] * len(column_names)
+		# normal cutoff
+		Wn = [cutoff / nyq for cutoff in Wn]
+		# columnwise filtering
+		for idx, i in enumerate(column_names):
+			# First, design the Buterworth filter
+			B, A = signal.butter(order, Wn[idx], btype='low', analog=False)
+			# filter the signal
+			df2[i] = signal.filtfilt(B, A, df2[i])
+			# drop any NaN rows created
+			df2 = dropNaNrows(df2)
+		return df2
+
+
+# lag certain columns
+def createlag(df, outputcols: list, lag: int = -1):
+	"""Shift outputcols up by lag time points
+	
+	Arguments:
+		df {pd.DataFrame} -- input dataframe
+		outputcols {list} -- list of cols to shift
+	
+	Keyword Arguments:
+		lag {int} -- Shift output columns by lag time points
+	
+	Returns:
+		pd.DataFrame -- cleaned dataframe with lagged output cols
+	"""
+
+	# prevent modifying original dataframe
+	df2 = df.copy()
+
+	# shift
+	df2[outputcols]  = df2[outputcols].shift(lag)
+	
+	# remove NaN rows created as a result
+	df2 = dropNaNrows(df2)
+
+	return df2
+
+
+# return a new column which is the sum of previous window_size values
+def window_sum(df_, window_size: int, column_names: list):
+    return df_[column_names].rolling(window=window_size, min_periods=window_size).sum()
+
+
+# return a new column which is the average of previous window_size values
+def window_mean(df_, window_size: int, column_names: list):
+    return df_[column_names].rolling(window=window_size, min_periods=window_size).mean()
+
+

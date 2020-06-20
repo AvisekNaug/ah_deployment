@@ -41,6 +41,8 @@ def data_driven_model_learn(*args, **kwargs):
 			vlv_model = dm.nn_model(*args, kwargs['vlv_model_config'])
 			vlv_model.design(*args, kwargs['vlv_model_config'])
 
+			models_created = True
+
 		if lstm_data_available.is_set():  # data is available; start training each model in parallel
 
 			# TODO: Have to implement this in parallel --> simple start threads here and join them
@@ -48,12 +50,12 @@ def data_driven_model_learn(*args, **kwargs):
 
 			# read train and val data for cwe,hwe and vlv models
 			with lstm_train_data_lock:
-				X_train_cwe, y_train_cwe, X_val_cwe, y_val_cwe = np.load('X_train_cwe.npy'),\
-				np.load('y_train_cwe.npy'), np.load('X_val_cwe.npy'), np.load('y_val_cwe.npy')
-				X_train_hwe, y_train_hwe, X_val_hwe, y_val_hwe = np.load('X_train_hwe.npy'),\
-				np.load('y_train_hwe.npy'), np.load('X_val_hwe.npy'), np.load('y_val_hwe.npy')
-				X_train_vlv, y_train_vlv, X_val_vlv, y_val_vlv = np.load('X_train_vlv.npy'),\
-				np.load('y_train_vlv.npy'), np.load('X_val_vlv.npy'), np.load('y_val_vlv.npy')
+				X_train_cwe, y_train_cwe, X_val_cwe, y_val_cwe = np.load('temp/X_train_cwe.npy'),\
+				np.load('temp/y_train_cwe.npy'), np.load('temp/X_val_cwe.npy'), np.load('temp/y_val_cwe.npy')
+				X_train_hwe, y_train_hwe, X_val_hwe, y_val_hwe = np.load('temp/X_train_hwe.npy'),\
+				np.load('temp/y_train_hwe.npy'), np.load('temp/X_val_hwe.npy'), np.load('temp/y_val_hwe.npy')
+				X_train_vlv, y_train_vlv, X_val_vlv, y_val_vlv = np.load('temp/X_train_vlv.npy'),\
+				np.load('temp/y_train_vlv.npy'), np.load('temp/X_val_vlv.npy'), np.load('temp/y_val_vlv.npy')
 			lstm_data_available.clear()
 
 			with lstm_weights_lock:  # don't let other threds read weights while training in session

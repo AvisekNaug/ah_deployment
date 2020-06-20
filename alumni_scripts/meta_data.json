@@ -352,5 +352,36 @@
             "75%": 74.0,
             "max": 77.0
         }
+    },
+    "column_agg_type" :{
+        "pchwst": "mean",
+        "vrf50":  "mean",
+        "oat":  "mean",
+        "sat":  "mean",
+        "sat_stpt":  "mean",
+        "oah":  "mean",
+        "vrf67":  "mean",
+        "pchw_flow": "sum",
+        "hwe": "sum",
+        "vrf1":  "mean",
+        "vrf30":  "mean",
+        "vrf34":  "mean",
+        "vrf74":  "mean",
+        "cwe": "sum",
+        "hws_st_stpt":  "mean",
+        "vrf60":  "mean",
+        "vrf63":  "mean",
+        "hws_st":  "mean",
+        "hws_vlv1": "sum",
+        "vrf77":  "mean",
+        "vrf64":  "mean",
+        "vrf10":  "mean",
+        "ee": "sum",
+        "hws_rt":  "mean",
+        "vrf100":  "mean",
+        "vrf40":  "mean",
+        "hws_flow": "sum",
+        "vrf108":  "mean",
+        "vrf20":  "mean"
     }
 }
