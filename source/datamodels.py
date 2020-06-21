@@ -69,6 +69,7 @@ class nn_model(datadrivenmodel):
 		self.timegap = kwargs['timegap']*5
 		self.epochs = 0
 		self.initial_epoch = 0
+		self.name = kwargs['name']
 
 
 		if self.model_type == 'regresion':
@@ -151,7 +152,8 @@ class nn_model(datadrivenmodel):
 
 		with self.graph.as_default:
 			with self.session.as_default:
-				self.modelchkpt = ModelCheckpoint(self.save_path+'best_model', monitor = 'val_loss', save_best_only = True, period=2)
+				self.modelchkpt = ModelCheckpoint(self.save_path +self.name+' best_model',
+				 monitor = 'val_loss', save_best_only = True, period=2)
 				self.earlystopping = EarlyStopping(monitor = 'val_loss', patience=5, restore_best_weights=False)
 				self.reduclronplateau = ReduceLROnPlateau(monitor = 'val_loss', patience=2, cooldown = 3)
 				self.tbCallBack = TensorBoard(log_dir=self.save_path+'loginfo', batch_size=self.train_batchsize, histogram_freq=0,
