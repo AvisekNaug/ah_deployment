@@ -93,7 +93,7 @@ def data_gen_process_cwe(*args, **kwargs):
 		else: rolling_mean_target.append(key)
 	
 	df[rolling_sum_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_sum_target)
-	df[rolling_mean_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_sum_target)
+	df[rolling_mean_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_mean_target)
 	df = a_utils.dropNaNrows(df)
 
 
@@ -213,6 +213,3 @@ def data_gen_process_hwe(*args, **kwargs):
 def data_gen_process_vlv(*args, **kwargs):
 	
 	pass
-
-todo: create stats for half hour data
-todo: create wbt data
