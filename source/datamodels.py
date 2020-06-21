@@ -9,9 +9,13 @@ import numpy as np
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from sklearn.metrics import roc_auc_score, classification_report, roc_auc_score
 
-from keras.models import Model
-from keras.layers import Input, Dense, LSTM, Reshape
-from keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau, TensorBoard
+import warnings
+with warnings.catch_warnings():
+
+	import tensorflow as tf
+	from keras.models import Model
+	from keras.layers import Input, Dense, LSTM, Reshape
+	from keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau, TensorBoard
 
 class datadrivenmodel():
 	"""
@@ -56,8 +60,8 @@ class nn_model(datadrivenmodel):
 		Initiate the class
 		"""
 		self.model_type = kwargs['model_type']
-		self.graph = kwargs['graph']
-		self.session = kwargs['session']
+		self.graph = tf.Graph()
+		self.session = tf.Session()
 		self.train_batchsize = kwargs['train_batchsize']
 		self.input_timesteps = kwargs['input_timesteps']
 		self.input_dim = kwargs['input_dim']
