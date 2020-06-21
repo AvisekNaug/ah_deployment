@@ -591,7 +591,7 @@ def df2operating_regions(df, column_names, thresholds):
     Select from data frame the operating regions based on threshold
     """
     
-    org_shape = df.shape[0]
+    # org_shape = df.shape[0]
     
     # select cells to be retained
     constraints = df.swifter.apply(
