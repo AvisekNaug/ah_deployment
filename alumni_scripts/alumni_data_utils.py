@@ -489,7 +489,7 @@ def dataframeplot(df, lazy = True, style = 'b--', ylabel : str = 'Y-axis', xlabe
 def dfsmoothing(df, 
 				column_names: list = [], 
 				order: int = 5, 
-				Wn: Union[list, float] = 0.015,
+				Wn: Union[list, float] = 0.0001,
 				T : Union[int,float]= 300):
 	"""Smoothes the dataframe columns using butterworth smoothing
 	
@@ -570,4 +570,235 @@ def window_sum(df_, window_size: int, column_names: list):
 def window_mean(df_, window_size: int, column_names: list):
     return df_[column_names].rolling(window=window_size, min_periods=window_size).mean()
 
+
+# sample time series data
+def sample_timeseries_df(df, period=1):
+	"""
+	resamples dataframe at "period" 5 minute time points
+	:param df:
+	:param period: number of 5 min time points
+	:return: sampled dataframe
+	"""
+	assert period<=12, "This function is only designed for less than 1 hour sampling"
+	timegap = period * 5
+
+	return df[df.index.minute % timegap == 0]
+
+
+# select non-zero operating regions
+def df2operating_regions(df, column_names, thresholds):
+    """
+    Select from data frame the operating regions based on threshold
+    """
+    
+    org_shape = df.shape[0]
+    
+    # select cells to be retained
+    constraints = df.swifter.apply(
+        lambda row: all([(cell > thresholds) for cell in row[column_names]]),
+        axis=1)
+    # Drop values set to be rejected
+    df = df.drop(df.index[~constraints], axis = 0)
+    
+    # print("Retaining {}% of the data".format(100*df.shape[0]/org_shape))
+    
+    return df
+
+
+def df_2_arrays( df,
+				 predictorcols : list, 
+				 outputcols: list, 
+				 lag: int,
+				 
+				 scaling : bool,
+				 scaler = None,
+				 scaleX : bool = True, 
+				 scaleY : bool = True,
+
+				 split = 0,
+				 shuffle: bool = False, 
+ 
+				 reshaping : bool = True, 
+				 input_timesteps: int = 1, 
+				 output_timesteps: int = 1, 
+				 ):
+	"""
+	0 Shift output columns up by lag time points
+	1 Scales the arrays if needed based on MinMaxScaler
+	2 Shuffle the dataframe rows if needed and divide the dataframe into train and test set numpy arrays
+	 taking care of the predictor and target variables
+	3 Rehapes the arrays if needed based on the requirements for the input to be a time sequence and output to be a time sequence
+	"""
+
+	# 0 Shift output columns by lag time points
+	df2 = createlag(df, outputcols = outputcols, lag = lag)
+
+	# df to array
+	X = df.loc[df2.index,:][predictorcols].to_numpy()
+	y = df2[outputcols].to_numpy()
+
+	# 1 Scales the arrays if needed
+	if scaling:
+		if scaleX:
+			X = scaler.minmax_scale(X, predictorcols, predictorcols)
+		if scaleY:
+			y = scaler.minmax_scale(y, outputcols, outputcols)
+
+
+	X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=split, shuffle=shuffle) 
+	"""
+	X_train.shape =(samplesize, len(predictorcols))
+	y_train.shape =(samplesize, len(outputcols))
+	"""
+
+	# 3 Rehapes the arrays if needed based on the requirements for the input to be a time sequence and \
+	# output to be a time sequence
+	if reshaping:  # NB: sample size will change due to reshaping and subsequent removal of NaN rows
+		X_train = inputreshaper(X_train, input_timesteps, output_timesteps)  # (eg samplesize, 1, 4 or 5)
+		y_train = outputreshaper(y_train, output_timesteps, len(outputcols), input_timesteps)  # (eg samplesize, 1, 1)
+		X_test = inputreshaper(X_test, input_timesteps, output_timesteps)  # (eg samplesize, 1, 4 or 5)
+		y_test = outputreshaper(y_test, output_timesteps, len(outputcols), input_timesteps)  # (eg samplesize, 1, 1)
+
+	return [X_train, X_test, y_train, y_test]
+
+
+def inputreshaper(X, input_timesteps=1, output_timesteps=1):
+	"""Reshapes the input/ predictor array into (nsamples, input_timesteps, input dimension)
+	
+	Arguments:
+		X {np.ndarray} -- The array to reshape
+	
+	Keyword Arguments:
+		input_timesteps {int} -- The number of timesteps from past to present time to consider as part of input (default: {1})
+		output_timesteps {int} -- The number of time steps into the future to predict (default: {1})
+	
+	Returns:
+		np.ndarray -- [description]
+	"""
+	totalArray = []
+	m, n = X.shape
+
+	for i in range(input_timesteps):
+		# copying
+		temp = np.copy(X)
+		# shifting
+		temp = temp[i:m + i - input_timesteps + 1, :]
+		# appending
+		totalArray.append(temp)
+
+	# reshaping collated array to (samples, input_timesteps, dimensions)
+	collatedarray = np.concatenate(totalArray, axis=1)
+	X_reshaped = collatedarray.reshape((collatedarray.shape[0], input_timesteps, n))
+	if output_timesteps != 1:
+		X_reshaped = X_reshaped[0:1 - output_timesteps, :, :]
+	# ^^We are removing last output_timesteps-1 data due to predicting sequence of length output_timesteps
+
+	return X_reshaped
+
+
+def outputreshaper(y, output_timesteps=1, outputdim=1, input_timesteps=1):
+	"""Reshapes the onput/ target array into (nsamples, output_timesteps, outputdim)
+	
+	Arguments:
+		y {np.ndarray} -- The array to reshape
+	
+	Keyword Arguments:
+		output_timesteps {int} -- The number of time steps into the future to predict (default: {1})
+		outputdim {int} --  Number of output features (default: {1})
+		input_timesteps {int} -- The number of timesteps from past to present time to consider as part of input (default: {1})
+	
+	Returns:
+		[type] -- [description]
+	"""
+	N = output_timesteps
+	totalArray = []
+	if outputdim == 1:
+		m = y.shape[0]  # since y is (m, )
+	else:
+		m, _ = y.shape
+
+	for i in range(N):
+		# copying
+		temp = np.copy(y)
+		# shifting
+		temp = temp[i + input_timesteps - 1: m + i - N + 1]
+		# appending
+		totalArray.append(temp.reshape(-1, 1))  # reshaping needed for concatenating along axis=1
+
+	# reshaping collated array to (samples, input_timesteps)
+	collatedarray = np.concatenate(totalArray, axis=1)
+	y_reshaped = collatedarray.reshape((collatedarray.shape[0], N, outputdim))
+	return y_reshaped
+
+
+class dataframescaler():
+	"""
+	An attempt at creating a class that can scale or inverse scale any variable
+	individually or collectively of a dataframe once, the original raw and cleaned values
+	are given
+	"""
+	def __init__(self, df):
+		
+		if isinstance(df, str):
+			self.stats = pd.read_pickle(df)
+			self.columns = self.stats.columns
+		else:
+			self.df = df  # get the dataframe
+			self.stats = df.describe()  # collect the statistics of a dataframe
+			self.columns = df.columns  # save column names
+
+	def minmax_scale(self,
+					 input_data : Union[pd.DataFrame, np.ndarray], 
+					 input_columns: list, df_2scale_columns: list):
+
+		x_min = self.stats.loc['min',input_columns]
+		x_max = self.stats.loc['max',input_columns]
+
+		if isinstance(input_data,pd.DataFrame):
+			return (input_data[df_2scale_columns].to_numpy()-x_min.to_numpy())/(x_max.to_numpy()-x_min.to_numpy())
+		else:
+			return (input_data-x_min.to_numpy())/(x_max.to_numpy()-x_min.to_numpy())
+
+	def minmax_inverse_scale(self,
+					 input_data : Union[pd.DataFrame, np.ndarray], 
+					 input_columns: list, df_2scale_columns: list):
+
+		x_min = self.stats.loc['min',input_columns]
+		x_max = self.stats.loc['max',input_columns]
+
+		if isinstance(input_data,pd.DataFrame):
+			return input_data[df_2scale_columns].to_numpy()*(x_max.to_numpy()-x_min.to_numpy()) + x_min.to_numpy()
+		else:
+			return input_data*(x_max.to_numpy()-x_min.to_numpy()) + x_min.to_numpy()
+		
+	def standard_scale(self, 
+						input_data : Union[pd.DataFrame, np.ndarray], 
+						input_columns: list, df_2scale_columns: list):
+		
+		x_mean= self.stats.loc['mean',input_columns]
+		x_std = self.stats.loc['std',input_columns]
+
+		if isinstance(input_data,pd.DataFrame):
+			return (input_data[df_2scale_columns].to_numpy()-x_mean.to_numpy())/x_std.to_numpy()
+		else:
+			return (input_data-x_mean.to_numpy())/x_std.to_numpy()
+
+	def standard_inverse_scale(self, 
+						input_data : Union[pd.DataFrame, np.ndarray], 
+						input_columns: list, df_2scale_columns: list):
+		
+		x_mean= self.stats.loc['mean',input_columns]
+		x_std = self.stats.loc['std',input_columns]
+
+		if isinstance(input_data,pd.DataFrame):
+			return input_data[df_2scale_columns].to_numpy()*x_std.to_numpy() + x_mean.to_numpy()
+		else:
+			return input_data*x_std.to_numpy() + x_mean.to_numpy()
+
+	def save_stats(self, path: str):
+
+		if not path.endswith('/'):
+			path += '/'
+
+		self.stats.to_pickle(path + 'datastats.pkl')
 

@@ -10,6 +10,7 @@ This script will have methods/Threads that help create data for different other 
 
 # imports
 import numpy as np
+import json
 from datetime import datetime, timedelta
 from influxdb import DataFrameClient
 
@@ -19,53 +20,199 @@ import alumni_data_utils as a_utils
 def offline_data_gen(*args, **kwargs):
 
 
-
 	time_stamp = kwargs['time_stamp']
+	# year and week
+	year_num = time_stamp.year
+	week_num = time_stamp.week
+
+
 	# Events
 	lstm_data_available = kwargs['lstm_data_available']  # new data available for lstm relearning
 	env_data_available = kwargs['env_data_available']  # new data available for env relearning
+
+
 	# Locks
 	lstm_train_data_lock = kwargs['lstm_data_read_lock']  # prevent dataloop from writing data
 	env_train_data_lock = kwargs['env_data_read_lock']  # prevent dataloop from writing data
 
+
 	client = DataFrameClient(host='localhost', port=8086, database=kwargs['database'],)
 
+
 	while True:
+
+
 		if not lstm_data_available.is_set():
-			result_obj = client.query("select * from alumni_data_v1 where time >= '{}' - 13w \
-    							and time < '{}'".format(kwargs['t_start'], kwargs['t_start']))
+
+
+			result_obj = client.query("select * from {} where time >= '{}' - 13w \
+    							and time < '{}'".format(kwargs['measurement'], str(time_stamp), str(time_stamp)))
+			
+
 
 			data_gen_process_cwe( **{ 'df' : result_obj['alumni_data_v1'].loc[:,kwargs['cwe_vars']],
-			  'agg': kwargs['agg'], 'smoothing' : kwargs['smoothing']  } )
+			  'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num, 'week_num': week_num,
+			    'lstm_train_data_lock':lstm_train_data_lock} )
 			data_gen_process_hwe( **{ 'df' : result_obj['alumni_data_v1'].loc[:,kwargs['hwe_vars']],
-			  'agg': kwargs['agg'], 'smoothing' : kwargs['smoothing']  } )
+			  'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num, 'week_num': week_num,
+			  'lstm_train_data_lock':lstm_train_data_lock  } )
 			data_gen_process_vlv( **{ 'df' : result_obj['alumni_data_v1'].loc[:,kwargs['vlv_vars']],
-			  'agg': kwargs['agg'], 'smoothing' : kwargs['smoothing']  } )
+			  'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num, 'week_num': week_num,
+			  'lstm_train_data_lock':lstm_train_data_lock  } )
+			
+			lstm_data_available.set()  # data is now available
+
 			
 		
 		time_stamp += timedelta(days=kwargs['relearn_interval_days'])
+		week_num += 1
+		week_num = week_num if week_num%53 != 0 else 1
+		year_num = year_num if week_num!= 1 else year_num+1
+
+
+def online_data_gen(*args, **kwargs):
+
+	pass
+
 
 def data_gen_process_cwe(*args, **kwargs):
 	
 	# read the data from the database
 	df = kwargs['df'].copy()
+
+
 	# smooth the data
-	df = a_utils.dfsmoothing(df=df, column_names=list(df.columns), **kwargs['smoothing'])
+	df = a_utils.dfsmoothing(df=df, column_names=list(df.columns))
 	df.clip(lower=0) # Remove <0 values for all columns as a result of smoothing
+	
+
 	# aggregate data
 	rolling_sum_target, rolling_mean_target = [], []
 	for key, value in kwargs['agg'].items():
 		if value == 'sum': rolling_sum_target.append(key)
 		else: rolling_mean_target.append(key)
+	
 	df[rolling_sum_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_sum_target)
 	df[rolling_mean_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_sum_target)
+	df = a_utils.dropNaNrows(df)
 
-	pass
+
+	# Sample the data at period intervals
+	df = a_utils.sample_timeseries_df(df, period=6)
+
+
+	# scale the columns: here we will use min-max
+	df[df.columns] = kwargs['scaler'].minmax_scale(df, df.columns, df.columns)
+
+
+	# creating sat-oat for the data
+	df['sat-oat'] = df['sat'] - df['oat']
+
+
+	# select non-zero operating regions
+	df = a_utils.df2operating_regions(df, ['cwe'], 0.02)
+
+
+	# determine split point for last 1 week test data
+	t_train_end = df.index[-1] - timedelta(days=7)
+	test_df = df.loc[t_train_end : , : ]
+	splitvalue = test_df.shape[0]
+
+	# create train and test/validate data
+	X_train, X_test, y_train, y_test = a_utils.df_2_arrays(df = df,
+		 predictorcols = ['sat-oat', 'orh', 'wbt', 'flow'], outputcols = ['cwe'], lag = 0,
+		 scaling = False, scaler = None, scaleX = True, scaleY = True,
+		 split=splitvalue, shuffle=False,
+		 reshaping=True, input_timesteps=1, output_timesteps = 1,)
+
+
+	# save test ids for later plots
+	idx_end = -max(X_test.shape[1],y_test.shape[1])
+	idx_start = idx_end - X_test.shape[0] + 1
+	test_idx = df.index[[ i for i in range(idx_start, idx_end+1, 1) ]]
+	test_info = {'test_idx' : [str(i) for i in test_idx], 'year_num': kwargs['year_num'], 'week_num':kwargs['week_num'] }
+	with open('../logs/cwe_test_info.txt', 'a') as ifile:
+ 		ifile.write(json.dumps(test_info)+'\n')      
+
+	data_lock = kwargs['lstm_train_data_lock']
+	with data_lock:
+		np.save('temp/X_train_cwe.npy', X_train)
+		np.save('temp/X_val_cwe.npy', X_test)
+		np.save('temp/y_train_cwe.npy', y_train)
+		np.save('temp/y_val_cwe.npy', y_test)
+
+
+
 
 def data_gen_process_hwe(*args, **kwargs):
 	
-	pass
+	# read the data from the database
+	df = kwargs['df'].copy()
+
+
+	# smooth the data
+	df = a_utils.dfsmoothing(df=df, column_names=list(df.columns))
+	df.clip(lower=0) # Remove <0 values for all columns as a result of smoothing
+	
+
+	# aggregate data
+	rolling_sum_target, rolling_mean_target = [], []
+	for key, value in kwargs['agg'].items():
+		if value == 'sum': rolling_sum_target.append(key)
+		else: rolling_mean_target.append(key)
+	
+	df[rolling_sum_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_sum_target)
+	df[rolling_mean_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_sum_target)
+	df = a_utils.dropNaNrows(df)
+
+
+	# Sample the data at period intervals
+	df = a_utils.sample_timeseries_df(df, period=6)
+
+
+	# scale the columns: here we will use min-max
+	df[df.columns] = kwargs['scaler'].minmax_scale(df, df.columns, df.columns)
+
+
+	# creating sat-oat for the data
+	df['sat-oat'] = df['sat'] - df['oat']
+
+
+	# select non-zero operating regions
+	df = a_utils.df2operating_regions(df, ['hwe'], 0.02)
+
+
+	# determine split point for last 1 week test data
+	t_train_end = df.index[-1] - timedelta(days=7)
+	test_df = df.loc[t_train_end : , : ]
+	splitvalue = test_df.shape[0]
+
+	# create train and test/validate data
+	X_train, X_test, y_train, y_test = a_utils.df_2_arrays(df = df,
+		 predictorcols = ['oat', 'orh', 'wbt', 'sat-oat'], outputcols = ['hwe'], lag = 0,
+		 scaling = False, scaler = None, scaleX = True, scaleY = True,
+		 split=splitvalue, shuffle=False,
+		 reshaping=True, input_timesteps=1, output_timesteps = 1,)
+
+
+	# save test ids for later plots
+	idx_end = -max(X_test.shape[1],y_test.shape[1])
+	idx_start = idx_end - X_test.shape[0] + 1
+	test_idx = df.index[[ i for i in range(idx_start, idx_end+1, 1) ]]
+	test_info = {'test_idx' : [str(i) for i in test_idx], 'year_num': kwargs['year_num'], 'week_num':kwargs['week_num'] }
+	with open('../logs/hwe_test_info.txt', 'a') as ifile:
+ 		ifile.write(json.dumps(test_info)+'\n')      
+
+	data_lock = kwargs['lstm_train_data_lock']
+	with data_lock:
+		np.save('temp/X_train_hwe.npy', X_train)
+		np.save('temp/X_val_hwe.npy', X_test)
+		np.save('temp/y_train_hwe.npy', y_train)
+		np.save('temp/y_val_hwe.npy', y_test)
 
 def data_gen_process_vlv(*args, **kwargs):
 	
 	pass
+
+todo: create stats for half hour data
+todo: create wbt data
