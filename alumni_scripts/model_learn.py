@@ -34,19 +34,16 @@ def data_driven_model_learn(*args, **kwargs):
 
 		if not models_created:  # create the 3 models needed for training
 
-			cwe_model = dm.nn_model(*args, kwargs['cwe_model_config'])
-			cwe_model.design(*args, kwargs['cwe_model_config'])
-			hwe_model = dm.nn_model(*args, kwargs['hwe_model_config'])
-			hwe_model.design(*args, kwargs['hwe_model_config'])
-			vlv_model = dm.nn_model(*args, kwargs['vlv_model_config'])
-			vlv_model.design(*args, kwargs['vlv_model_config'])
+			cwe_model = dm.nn_model(*args, **kwargs['cwe_model_config'])
+			cwe_model.design(*args, **kwargs['cwe_model_config'])
+			hwe_model = dm.nn_model(*args, **kwargs['hwe_model_config'])
+			hwe_model.design(*args, **kwargs['hwe_model_config'])
+			vlv_model = dm.nn_model(*args, **kwargs['vlv_model_config'])
+			vlv_model.design(*args, **kwargs['vlv_model_config'])
 
 			models_created = True
 
 		if lstm_data_available.is_set():  # data is available; start training each model in parallel
-
-			# TODO: Have to implement this in parallel --> simple start threads here and join them
-			# These threads run the fit function for each model class
 
 			# read train and val data for cwe,hwe and vlv models
 			with lstm_train_data_lock:
