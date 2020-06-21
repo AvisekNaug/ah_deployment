@@ -66,11 +66,14 @@ if __name__ == "__main__":
 	end_learning = Event()
 	lstm_train_data_lock = Lock()
 	lstm_weights_lock = Lock()
+	
+	# both of the two below is obtained from meta_data.json
 	# agg = 
 	# scaler = 
-	# cwe_vars = 
-	# hwe_vars = 
-	# vlv_vars =
+
+	# cwe_vars = []
+	# hwe_vars = []
+	# vlv_vars = []
 
 	time_stamp = datetime(year = 2018, month = 11, day = 1, hour=0, minute=0, second=0)
 
@@ -80,4 +83,6 @@ if __name__ == "__main__":
 						'end_learning':end_learning,
 						'lstm_train_data_lock':lstm_train_data_lock,
 						'lstm_weights_lock':lstm_weights_lock})
+
+	# How to set end_learning
 
