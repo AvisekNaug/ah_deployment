@@ -737,14 +737,18 @@ class dataframescaler():
 	individually or collectively of a dataframe once, the original raw and cleaned values
 	are given
 	"""
-	def __init__(self, df):
+	def __init__(self, df: Union[str, pd.DataFrame, dict]):
 		
 		if isinstance(df, str):
 			self.stats = pd.read_pickle(df)
 			self.columns = self.stats.columns
-		else:
+		elif isinstance(df, pd.DataFrame):
 			self.df = df  # get the dataframe
 			self.stats = df.describe()  # collect the statistics of a dataframe
+			self.columns = df.columns  # save column names
+		elif isinstance(df, dict):
+			df = pd.DataFrame(df)
+			self.stats = df  # get the statistics from dictionary
 			self.columns = df.columns  # save column names
 
 	def minmax_scale(self,
