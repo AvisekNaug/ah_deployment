@@ -13,6 +13,7 @@ import warnings
 with warnings.catch_warnings():
 
 	import tensorflow as tf
+	from keras import backend as K
 	from keras.models import Model
 	from keras.layers import Input, Dense, LSTM, Reshape
 	from keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau, TensorBoard
@@ -50,6 +51,7 @@ class datadrivenmodel():
 		"""
 		raise NotImplementedError
 
+
 class nn_model(datadrivenmodel):
 	"""
 	Creates the data driven model for predicting cooling energy
@@ -61,7 +63,7 @@ class nn_model(datadrivenmodel):
 		"""
 		self.model_type = kwargs['model_type']
 		self.graph = tf.Graph()
-		self.session = tf.Session()
+		self.session = tf.Session(graph=self.graph)
 		self.train_batchsize = kwargs['train_batchsize']
 		self.input_timesteps = kwargs['input_timesteps']
 		self.input_dim = kwargs['input_dim']
@@ -92,20 +94,21 @@ class nn_model(datadrivenmodel):
 		activation_dense = kwargs['activation_dense']
 		lstm_layers, lstm_units = kwargs['lstm_layers'], kwargs['lstm_units']
 		activation_lstm = kwargs['activation_lstm']
+		self.lstm_layer_num =  kwargs['lstm_layers']
 
-		with self.graph.as_default:
-			with self.session.as_default:
-
-				layers = Input(batch_shape=(None, self.input_timesteps, self.input_dim), name = kwargs['name']+'_input')
+		with self.graph.as_default():  # pylint: disable=not-context-manager
+			with self.session.as_default():  # pylint: disable=not-context-manager
+				input_layer = Input(batch_shape=(None, self.input_timesteps, self.input_dim), name = kwargs['name']+'_input')
+				layers = input_layer
 				for i in range(dense_layers):
 					layers = Dense(dense_units, activation=activation_dense, name=kwargs['name']+'_dense'+str(i))(layers)
 				for i in range(lstm_layers-1):
 					layers = LSTM(lstm_units, activation=activation_lstm, return_sequences=True,
 					 name=kwargs['name']+'_lstm'+str(i))(layers)
 				output = LSTM(self.outputdim, activation=self.last_activation, return_sequences=False,
-					 name=kwargs['name']+'lstm'+str(i+1))(layers)
+					 name=kwargs['name']+'_lstm'+str(i+1))(layers)
 				output = Reshape((1,self.outputdim), name = kwargs['name']+'_reshape')(output)
-				self.model = Model(inputs=layers, outputs=output)
+				self.model = Model(inputs=input_layer, outputs=output)
 
 
 	def fit(self, *args, **kwargs):
@@ -113,8 +116,8 @@ class nn_model(datadrivenmodel):
 		Fit the model to the data
 		"""
 		# train the model
-		with self.graph.as_default:
-			with self.session.as_default:
+		with self.graph.as_default():  # pylint: disable=not-context-manager
+			with self.session.as_default():  # pylint: disable=not-context-manager
 				self.history = self.model.fit(kwargs['X_train'], kwargs['y_train'],
 											validation_data=(kwargs['X_val'], kwargs['y_val']),
 											batch_size=self.train_batchsize,
@@ -130,8 +133,8 @@ class nn_model(datadrivenmodel):
 		"""
 		Evaluate the model; pass args,kwargs if needed
 		"""
-		with self.graph.as_default:
-			with self.session.as_default:
+		with self.graph.as_default():  # pylint: disable=not-context-manager
+			with self.session.as_default():  # pylint: disable=not-context-manager
 				predictions = self.model.predict(kwargs['X_test'])
 		return predictions
 	
@@ -140,8 +143,8 @@ class nn_model(datadrivenmodel):
 		"""
 		Compile the network
 		"""
-		with self.graph.as_default:
-			with self.session.as_default:
+		with self.graph.as_default():  # pylint: disable=not-context-manager
+			with self.session.as_default():  # pylint: disable=not-context-manager
 				self.model.compile(loss=self.loss,optimizer='adam')
 
 
@@ -149,17 +152,28 @@ class nn_model(datadrivenmodel):
 		"""
 		Create callbacks
 		"""
-
-		with self.graph.as_default:
-			with self.session.as_default:
-				self.modelchkpt = ModelCheckpoint(self.save_path +self.name+' best_model',
-				 monitor = 'val_loss', save_best_only = True, period=2)
-				self.earlystopping = EarlyStopping(monitor = 'val_loss', patience=5, restore_best_weights=False)
-				self.reduclronplateau = ReduceLROnPlateau(monitor = 'val_loss', patience=2, cooldown = 3)
-				self.tbCallBack = TensorBoard(log_dir=self.save_path+'loginfo', batch_size=self.train_batchsize, histogram_freq=0,
-				write_graph=False, write_images=False, write_grads=True)
-				self.cb_list = [self.modelchkpt, self.earlystopping, self.reduclronplateau, self.tbCallBack]
+		self.modelchkpt = ModelCheckpoint(self.save_path +self.name+' best_model',
+			monitor = 'val_loss', save_best_only = True, period=2)
+		self.earlystopping = EarlyStopping(monitor = 'val_loss', patience=5, restore_best_weights=False)
+		self.reduclronplateau = ReduceLROnPlateau(monitor = 'val_loss', patience=2, cooldown = 3)
+		self.tbCallBack = TensorBoard(log_dir=self.save_path+'loginfo', batch_size=self.train_batchsize, histogram_freq=0,
+		write_graph=False, write_images=False, write_grads=True)
+		self.cb_list = [self.modelchkpt, self.earlystopping, self.reduclronplateau, self.tbCallBack]
 		return self.cb_list
+
+
+	def re_init_layers(self, *args, **kwargs):
+		"""
+		Freeze certain layers and reinitialize certain layers
+		"""
+		with self.graph.as_default():  # pylint: disable=not-context-manager
+			with self.session.as_default():  # pylint: disable=not-context-manager
+				for layer in self.model.layers[1:-1]:
+					if 'cell' in layer.__dict__.keys():
+						layer.cell.kernel.initializer.run(session=K.get_session())
+					else:
+						layer.kernel.initializer.run(session=K.get_session())
+				self.model.compile(loss=self.loss,optimizer='adam')
 
 
 def regression_evaluate(prediction: np.ndarray, target: np.ndarray, **kwargs):
