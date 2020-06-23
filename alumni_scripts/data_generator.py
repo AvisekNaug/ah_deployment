@@ -16,6 +16,8 @@ import numpy as np
 import json
 from datetime import datetime, timedelta
 from influxdb import DataFrameClient
+from threading import Thread
+from multiprocessing import Event, Lock
 
 from alumni_scripts import alumni_data_utils as a_utils
 
@@ -30,13 +32,13 @@ def offline_data_gen(*args, **kwargs):
 	year_num, week_num, _ = time_stamp.isocalendar()
 
 	# Events
-	lstm_data_available = kwargs['lstm_data_available']  # new data available for lstm relearning
-	env_data_available = kwargs['env_data_available']  # new data available for env relearning  # pylint: disable=unused-variable
-	end_learning = kwargs['end_learning'] 
+	lstm_data_available : Event = kwargs['lstm_data_available']  # new data available for lstm relearning
+	env_data_available : Event = kwargs['env_data_available']  # new data available for env relearning  # pylint: disable=unused-variable
+	end_learning : Event = kwargs['end_learning'] 
 
 	# Locks
-	lstm_train_data_lock = kwargs['lstm_train_data_lock']  # prevent dataloop from writing data
-	env_train_data_lock = kwargs['env_train_data_lock']  # prevent dataloop from writing data  # pylint: disable=unused-variable
+	lstm_train_data_lock : Lock = kwargs['lstm_train_data_lock']  # prevent dataloop from writing data
+	env_train_data_lock : Lock = kwargs['env_train_data_lock']  # prevent dataloop from writing data  # pylint: disable=unused-variable
 
 
 	client = DataFrameClient(host='localhost', port=8086, database=kwargs['database'],)
@@ -44,38 +46,62 @@ def offline_data_gen(*args, **kwargs):
 
 	while True:
 
-
-		if not lstm_data_available.is_set():
+		"""relearning interval decider: here it is a condition; for online it will be time interval or error measure"""
+		if not (lstm_data_available.is_set() | env_data_available.is_set()):
 
 
 			result_obj = client.query("select * from {} where time >= '{}' - 13w \
 								and time < '{}'".format(kwargs['measurement'], str(time_stamp), str(time_stamp)))
 
-			data_gen_process_cwe( **{ 'df' : result_obj[kwargs['measurement']].loc[:,kwargs['cwe_vars']],
-			'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num, 'week_num': week_num,
-				'lstm_train_data_lock':lstm_train_data_lock, 'save_path':kwargs['save_path']} )
-			data_gen_process_hwe( **{ 'df' : result_obj[kwargs['measurement']].loc[:,kwargs['hwe_vars']],
-			'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num, 'week_num': week_num,
-			'lstm_train_data_lock':lstm_train_data_lock, 'save_path':kwargs['save_path'] } )
-			data_gen_process_vlv( **{ 'df' : result_obj[kwargs['measurement']].loc[:,kwargs['vlv_vars']],
-			'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num, 'week_num': week_num,
-			'lstm_train_data_lock':lstm_train_data_lock, 'save_path':kwargs['save_path'] } )
+			data_gen_process_cwe_th = Thread(target=data_gen_process_cwe, daemon=False,
+										kwargs={ 
+										'df' : result_obj[kwargs['measurement']].loc[:,kwargs['cwe_vars']],
+										'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
+										'week_num': week_num, 'save_path':kwargs['save_path'] 
+										})
+			data_gen_process_hwe_th = Thread(target=data_gen_process_hwe, daemon=False, 
+										kwargs={ 
+										'df' : result_obj[kwargs['measurement']].loc[:,kwargs['hwe_vars']],
+										'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
+										'week_num': week_num, 'save_path':kwargs['save_path'] 
+										})
+			data_gen_process_vlv_th = Thread(target=data_gen_process_vlv, daemon=False, 
+										kwargs={ 
+										'df' : result_obj[kwargs['measurement']].loc[:,kwargs['vlv_vars']],
+										'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
+										'week_num': week_num, 'save_path':kwargs['save_path'] 
+										})
+			data_gen_process_env_th = Thread(target=data_gen_process_env, daemon=False, 
+										kwargs={
+										'df' : result_obj[kwargs['measurement']].loc[:,kwargs['env_vars']],
+										'agg': kwargs['agg'], 'scaler': kwargs['scaler'],
+										'save_path':kwargs['save_path']
+										})
+
+
+			with lstm_train_data_lock:
+				with env_train_data_lock:
+					data_gen_process_cwe_th.start()
+					data_gen_process_hwe_th.start()
+					data_gen_process_vlv_th.start()
+					data_gen_process_env_th.start()
+					data_gen_process_cwe_th.join()
+					data_gen_process_hwe_th.join()
+					data_gen_process_vlv_th.join()
+					data_gen_process_env_th.join()
+
 			
-			lstm_data_available.set()  # data is now available
+			lstm_data_available.set()  # data is now available for lstm training
+			env_data_available.set()  # data is now available for agent and env training
 		
 			time_stamp += timedelta(days=kwargs['relearn_interval_days'])
 			week_num += 1
 			week_num = week_num if week_num%53 != 0 else 1
 			year_num = year_num if week_num!= 1 else year_num+1
 
-			if week_num == 49:
+			if week_num == 49:  # can be other terminating condition like year==2020 & week=5 etc
 				end_learning.set()
 				break
-
-
-def online_data_gen(*args, **kwargs):
-
-	pass
 
 
 def data_gen_process_cwe(*args, **kwargs):
@@ -137,12 +163,10 @@ def data_gen_process_cwe(*args, **kwargs):
 	with open(kwargs['save_path']+'cwe_test_info.txt', 'a') as ifile:
 		ifile.write(json.dumps(test_info)+'\n')      
 
-	data_lock = kwargs['lstm_train_data_lock']
-	with data_lock:
-		np.save(kwargs['save_path']+'X_train_cwe.npy', X_train)
-		np.save(kwargs['save_path']+'X_val_cwe.npy', X_test)
-		np.save(kwargs['save_path']+'y_train_cwe.npy', y_train)
-		np.save(kwargs['save_path']+'y_val_cwe.npy', y_test)
+	np.save(kwargs['save_path']+'X_train_cwe.npy', X_train)
+	np.save(kwargs['save_path']+'X_val_cwe.npy', X_test)
+	np.save(kwargs['save_path']+'y_train_cwe.npy', y_train)
+	np.save(kwargs['save_path']+'y_val_cwe.npy', y_test)
 
 
 def data_gen_process_hwe(*args, **kwargs):
@@ -204,12 +228,10 @@ def data_gen_process_hwe(*args, **kwargs):
 	with open(kwargs['save_path']+'hwe_test_info.txt', 'a') as ifile:
 		ifile.write(json.dumps(test_info)+'\n')      
 
-	data_lock = kwargs['lstm_train_data_lock']
-	with data_lock:
-		np.save(kwargs['save_path']+'X_train_hwe.npy', X_train)
-		np.save(kwargs['save_path']+'X_val_hwe.npy', X_test)
-		np.save(kwargs['save_path']+'y_train_hwe.npy', y_train)
-		np.save(kwargs['save_path']+'y_val_hwe.npy', y_test)
+	np.save(kwargs['save_path']+'X_train_hwe.npy', X_train)
+	np.save(kwargs['save_path']+'X_val_hwe.npy', X_test)
+	np.save(kwargs['save_path']+'y_train_hwe.npy', y_train)
+	np.save(kwargs['save_path']+'y_val_hwe.npy', y_test)
 
 
 def data_gen_process_vlv(*args, **kwargs):
@@ -275,9 +297,53 @@ def data_gen_process_vlv(*args, **kwargs):
 	with open(kwargs['save_path']+'temp/vlv_test_info.txt', 'a') as ifile:
 		ifile.write(json.dumps(test_info)+'\n')      
 
-	data_lock = kwargs['lstm_train_data_lock']
-	with data_lock:
-		np.save(kwargs['save_path']+'X_train_vlv.npy', X_train)
-		np.save(kwargs['save_path']+'X_val_vlv.npy', X_test)
-		np.save(kwargs['save_path']+'y_train_vlv.npy', y_train)
-		np.save(kwargs['save_path']+'y_val_vlv.npy', y_test)
+	np.save(kwargs['save_path']+'X_train_vlv.npy', X_train)
+	np.save(kwargs['save_path']+'X_val_vlv.npy', X_test)
+	np.save(kwargs['save_path']+'y_train_vlv.npy', y_train)
+	np.save(kwargs['save_path']+'y_val_vlv.npy', y_test)
+
+
+def data_gen_process_env(*args, **kwargs):
+
+	# read the data from the database
+	df = kwargs['df'].copy()
+
+	# smooth the data
+	# df = a_utils.dfsmoothing(df=df, column_names=list(df.columns))
+	df.clip(lower=0) # Remove <0 values for all columns as a result of smoothing
+	
+
+	# aggregate data
+	rolling_sum_target, rolling_mean_target = [], []
+	for col_name in df.columns:
+		if kwargs['agg'][col_name] == 'sum' : rolling_sum_target.append(col_name)
+		else: rolling_mean_target.append(col_name)
+	
+	df[rolling_sum_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_sum_target)
+	df[rolling_mean_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_mean_target)
+	df = a_utils.dropNaNrows(df)
+
+
+	# Sample the data at period intervals
+	df = a_utils.sample_timeseries_df(df, period=6)
+
+
+	# scale the columns: here we will use min-max
+	df[df.columns] = kwargs['scaler'].minmax_scale(df, df.columns, df.columns)
+
+	# creating sat-oat for the data
+	df['sat-oat'] = df['sat'] - df['oat']
+
+	# save the data frame
+	df.to_pickle(kwargs['save_path']+'env_data.pkl')
+
+
+def online_data_gen(*args, **kwargs):
+	"""
+	This process should trigger data collection and correspondingly trigger other lstm and agent
+	relearning modules based on current time being at the end of a regular interval of whatever(or error
+	tracking measure). Also, it should use the bdx api to get the raw data-> clean and process it 
+	using data_process -> and finally do the data_gen_* methods which will trigger model learning
+	which is followed by model training
+	"""
+	raise NotImplementedError
