@@ -7,9 +7,10 @@ with warnings.catch_warnings():
 	from stable_baselines.common.vec_env import DummyVecEnv
 	from stable_baselines.common import set_global_seeds, make_vec_env
 	from keras.models import load_model
-	import alumni_env
-	import ppo_agent
-	import alumni_env_wrapper
+	from alumni_scripts import alumni_env
+	from alumni_scripts import ppo_agent
+	from alumni_scripts import alumni_env_wrapper
+	from alumni_scripts.alumni_data_utils import rl_perf_save
 
 from pandas import read_pickle
 from multiprocessing import Event, Lock
@@ -29,11 +30,14 @@ def controller_learn(*args, **kwargs):
 
 	interval = 1
 	env_created = False
+	agent_created = False
+	writeheader = True
 
 	while True:
 
-		# if data for alumni env and energy models are available, then run controller training
-		if (env_data_available.is_set() & lstm_weights_available.is_set()):  
+		# if data for alumni env and energy models are available, and agent_weights have not been updated
+		# after last read then run controller training --!! To ber set to clear for offline training
+		if ( env_data_available.is_set() & lstm_weights_available.is_set() & (not agent_weights_available.is_set()) ):
 
 			with env_train_data_lock:
 				df_scaled = read_pickle(kwargs['save_path']+'env_data.pkl')
@@ -82,22 +86,40 @@ def controller_learn(*args, **kwargs):
 			start_index = 0  # start rank index
 			vec_env_cls = DummyVecEnv
 
+			""" create the Gym env"""
 			if not env_created:
 				env = alumni_env_wrapper.custom_make_vec_env(
 					env_id=env_id, n_envs=1, start_index = start_index, monitor_dir = monitor_dir,
 					vec_env_cls = vec_env_cls, env_kwargs = env_kwargs
 				)
 				env_created = True
-			else:	
+			else:  # re-initialize env with new interval's data
 				# change the monitor log directory
 				env.env_method('changelogpath', (monitor_dir))
 				# reinitialize the environment with new data and models
 				env.env_method('re_init_env', **env_kwargs)
 
-			"""provide envrionment to the new or existing rl model"""
+			"""provide envrionment to the new rl agent for ppo to decide its state and actions spaces"""
+			if not agent_created:
+				agent = ppo_agent.get_agent(env=env, 
+											model_save_dir=kwargs['save_path'],
+											monitor_log_dir = kwargs['logs'])
 			
+			"""Start training the agent"""
+			env.env_method('trainenv')
+			with agent_weights_lock:
+				agent = ppo_agent.train_agent(agent, env = env, steps=kwargs['rl_train_steps'])
 
+			"""test rl model"""
+			env.env_method('testenv')
+			# provide path to the current best rl agent weights and test it
+			best_rl_agent_path = kwargs['save_path'] + 'best_rl_agent'
+			with agent_weights_lock:
+				test_perf_log = ppo_agent.test_agent(best_rl_agent_path, env, num_episodes=1)
+			#agent_weights_available.set()  # agent weights are available for deployment thread
+			# save the performance data
+			rl_perf_save(test_perf_log_list=test_perf_log, log_dir=kwargs['save_path'],
+							 save_as= 'csv', header=writeheader)
+			writeheader = False  # don't write header after first iteration
 
-
-
-	
+			interval += 1
