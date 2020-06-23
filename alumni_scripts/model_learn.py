@@ -5,7 +5,7 @@ import sys, os
 sys.path.append(os.path.abspath(os.path.join('..')))
 import numpy as np
 from threading import Thread
-
+from multiprocessing import Event, Lock
 
 from source import datamodels as dm
 
@@ -16,11 +16,12 @@ def data_driven_model_learn(*args, **kwargs):
 	"""
 
 	# Events
-	lstm_data_available = kwargs['lstm_data_available']  # new data available for relearning
-	end_learning = kwargs['end_learning']  # to break out of non-stoping learning offline
+	lstm_data_available : Event = kwargs['lstm_data_available']  # new data available for relearning
+	end_learning : Event = kwargs['end_learning']  # to break out of non-stoping learning offline
+	lstm_weights_available : Event = kwargs['lstm_weights_available']
 	# Locks
-	lstm_train_data_lock = kwargs['lstm_train_data_lock']  # prevent dataloop from writing data
-	lstm_weights_lock = kwargs['lstm_weights_lock']  # prevent other loops from reading LSTM weights
+	lstm_train_data_lock : Lock = kwargs['lstm_train_data_lock']  # prevent dataloop from writing data
+	lstm_weights_lock : Lock = kwargs['lstm_weights_lock']  # prevent other loops from reading LSTM weights
 	# check variables
 	models_created = False
 	eval_interval = 1
@@ -44,7 +45,8 @@ def data_driven_model_learn(*args, **kwargs):
 
 			print("****Models Created****")
 
-		if lstm_data_available.is_set():  # data is available; start training each model in parallel
+		# data is available and prev models have been read by env
+		if (lstm_data_available.is_set() & (not lstm_weights_available.is_set())):  
 
 			""" Read the train and eval data """
 			with lstm_train_data_lock:
@@ -80,6 +82,8 @@ def data_driven_model_learn(*args, **kwargs):
 				th_cwe_learn.join()
 				th_hwe_learn.join()
 				th_vlv_learn.join()
+				# weights are available
+				lstm_weights_available.set()
 
 			"""Prediction"""
 			# predict on test data cwe
