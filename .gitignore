@@ -12,4 +12,5 @@ alumnivenv/
 raw_data
 auths.json
 tmp
+logs
 # custom
