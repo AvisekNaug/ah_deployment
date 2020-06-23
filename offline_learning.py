@@ -45,34 +45,35 @@ def control_loop():
 if __name__ == "__main__":
 	
 	exp_params = {}
+	save_path = 'tmp/'
 
 	exp_params['cwe_model_config'] = {
 		'model_type': 'regresion', 'train_batchsize' : 32,
 		'input_timesteps': 1, 'input_dim': 4, 'timegap': 6,
 		'dense_layers' : 4, 'dense_units': 8, 'activation_dense' : 'relu',
 		'lstm_layers' : 4, 'lstm_units': 8, 'activation_lstm' : 'relu',
-		'save_path': 'temp/', 'name': 'cwe', 'epochs' : 100
+		'save_path': save_path, 'name': 'cwe', 'epochs' : 100
 	}
 	exp_params['hwe_model_config'] = {
 		'model_type': 'regresion', 'train_batchsize' : 32,
 		'input_timesteps': 1, 'input_dim': 4, 'timegap': 6,
 		'dense_layers' : 4, 'dense_units': 8, 'activation_dense' : 'relu',
 		'lstm_layers' : 4, 'lstm_units': 8, 'activation_lstm' : 'relu',
-		'save_path': 'temp/', 'name': 'hwe', 'epochs' : 50
+		'save_path': save_path, 'name': 'hwe', 'epochs' : 50
 	}
 	exp_params['vlv_model_config'] = {
 		'model_type': 'classification', 'train_batchsize' : 32,
 		'input_timesteps': 1, 'input_dim': 4, 'timegap': 6,
 		'dense_layers' : 4, 'dense_units': 8, 'activation_dense' : 'relu',
 		'lstm_layers' : 4, 'lstm_units': 8, 'activation_lstm' : 'relu',
-		'save_path': 'temp/', 'name': 'vlv', 'epochs' : 100
+		'save_path': save_path, 'name': 'vlv', 'epochs' : 100
 	}
 
-	lstm_data_available = Event()
-	end_learning = Event()
-	env_data_available = Event()
-	lstm_train_data_lock = Lock()
-	lstm_weights_lock = Lock()
+	lstm_data_available = Event()  # new data available for lstm relearning
+	end_learning = Event()  # end the relearning procedure
+	env_data_available = Event()  # new data available for alumni env rl learning
+	lstm_train_data_lock = Lock()  # read / write lstm data without access issues
+	lstm_weights_lock = Lock()  # read / write lstm weights without access issues
 	env_train_data_lock = Lock()
 	
 	# both of the two below is obtained from meta_data.json
@@ -104,25 +105,22 @@ if __name__ == "__main__":
 								'hwe_vars': hwe_vars,
 								'vlv_vars': vlv_vars,
 								'database':'bdx_batch_db',
-								'measurement':'alumni_data_v2'})
+								'measurement':'alumni_data_v2',
+								'save_path': save_path})
 	data_gen_th.start()
 
 	model_learn_th = Thread(target=mdlearn.data_driven_model_learn, daemon = False,
-						kwargs={
-							'lstm_data_available':lstm_data_available,
-							'end_learning':end_learning,
-							'lstm_train_data_lock':lstm_train_data_lock,
-							'lstm_weights_lock':lstm_weights_lock,
-							'cwe_model_config':exp_params['cwe_model_config'],
-							'hwe_model_config':exp_params['hwe_model_config'],
-							'vlv_model_config':exp_params['vlv_model_config'],
-
-						}
-	)
+						kwargs={'lstm_data_available':lstm_data_available,
+								'end_learning':end_learning,
+								'lstm_train_data_lock':lstm_train_data_lock,
+								'lstm_weights_lock':lstm_weights_lock,
+								'cwe_model_config':exp_params['cwe_model_config'],
+								'hwe_model_config':exp_params['hwe_model_config'],
+								'vlv_model_config':exp_params['vlv_model_config'],
+								'save_path': save_path})
 	model_learn_th.start()
 
 	model_learn_th.join()
 	data_gen_th.join()
 	print("End of program execution")
-	# How to set end_learning
 

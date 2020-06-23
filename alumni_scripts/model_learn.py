@@ -48,12 +48,15 @@ def data_driven_model_learn(*args, **kwargs):
 
 			""" Read the train and eval data """
 			with lstm_train_data_lock:
-				X_train_cwe, y_train_cwe, X_val_cwe, y_val_cwe = np.load('temp/X_train_cwe.npy'),\
-				np.load('temp/y_train_cwe.npy'), np.load('temp/X_val_cwe.npy'), np.load('temp/y_val_cwe.npy')
-				X_train_hwe, y_train_hwe, X_val_hwe, y_val_hwe = np.load('temp/X_train_hwe.npy'),\
-				np.load('temp/y_train_hwe.npy'), np.load('temp/X_val_hwe.npy'), np.load('temp/y_val_hwe.npy')
-				X_train_vlv, y_train_vlv, X_val_vlv, y_val_vlv = np.load('temp/X_train_vlv.npy'),\
-				np.load('temp/y_train_vlv.npy'), np.load('temp/X_val_vlv.npy'), np.load('temp/y_val_vlv.npy')
+				X_train_cwe, y_train_cwe, X_val_cwe, y_val_cwe = np.load(kwargs['save_path']+'X_train_cwe.npy'),\
+					np.load(kwargs['save_path']+'y_train_cwe.npy'), np.load(kwargs['save_path']+'X_val_cwe.npy'), \
+					np.load(kwargs['save_path']+'y_val_cwe.npy')
+				X_train_hwe, y_train_hwe, X_val_hwe, y_val_hwe = np.load(kwargs['save_path']+'X_train_hwe.npy'),\
+					np.load(kwargs['save_path']+'y_train_hwe.npy'), np.load(kwargs['save_path']+'X_val_hwe.npy'), \
+					np.load(kwargs['save_path']+'y_val_hwe.npy')
+				X_train_vlv, y_train_vlv, X_val_vlv, y_val_vlv = np.load(kwargs['save_path']+'X_train_vlv.npy'),\
+					np.load(kwargs['save_path']+'y_train_vlv.npy'), np.load(kwargs['save_path']+'X_val_vlv.npy'), \
+					np.load(kwargs['save_path']+'y_val_vlv.npy')
 			lstm_data_available.clear()
 
 			""" Begin the training """

@@ -53,13 +53,13 @@ def offline_data_gen(*args, **kwargs):
 
 			data_gen_process_cwe( **{ 'df' : result_obj[kwargs['measurement']].loc[:,kwargs['cwe_vars']],
 			'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num, 'week_num': week_num,
-				'lstm_train_data_lock':lstm_train_data_lock} )
+				'lstm_train_data_lock':lstm_train_data_lock, 'save_path':kwargs['save_path']} )
 			data_gen_process_hwe( **{ 'df' : result_obj[kwargs['measurement']].loc[:,kwargs['hwe_vars']],
 			'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num, 'week_num': week_num,
-			'lstm_train_data_lock':lstm_train_data_lock  } )
+			'lstm_train_data_lock':lstm_train_data_lock, 'save_path':kwargs['save_path'] } )
 			data_gen_process_vlv( **{ 'df' : result_obj[kwargs['measurement']].loc[:,kwargs['vlv_vars']],
 			'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num, 'week_num': week_num,
-			'lstm_train_data_lock':lstm_train_data_lock  } )
+			'lstm_train_data_lock':lstm_train_data_lock, 'save_path':kwargs['save_path'] } )
 			
 			lstm_data_available.set()  # data is now available
 		
@@ -134,15 +134,15 @@ def data_gen_process_cwe(*args, **kwargs):
 	idx_start = idx_end - X_test.shape[0] + 1
 	test_idx = df.index[[ i for i in range(idx_start, idx_end+1, 1) ]]
 	test_info = {'test_idx' : [str(i) for i in test_idx], 'year_num': kwargs['year_num'], 'week_num':kwargs['week_num'] }
-	with open('temp/cwe_test_info.txt', 'a') as ifile:
+	with open(kwargs['save_path']+'cwe_test_info.txt', 'a') as ifile:
 		ifile.write(json.dumps(test_info)+'\n')      
 
 	data_lock = kwargs['lstm_train_data_lock']
 	with data_lock:
-		np.save('temp/X_train_cwe.npy', X_train)
-		np.save('temp/X_val_cwe.npy', X_test)
-		np.save('temp/y_train_cwe.npy', y_train)
-		np.save('temp/y_val_cwe.npy', y_test)
+		np.save(kwargs['save_path']+'X_train_cwe.npy', X_train)
+		np.save(kwargs['save_path']+'X_val_cwe.npy', X_test)
+		np.save(kwargs['save_path']+'y_train_cwe.npy', y_train)
+		np.save(kwargs['save_path']+'y_val_cwe.npy', y_test)
 
 
 def data_gen_process_hwe(*args, **kwargs):
@@ -201,15 +201,15 @@ def data_gen_process_hwe(*args, **kwargs):
 	idx_start = idx_end - X_test.shape[0] + 1
 	test_idx = df.index[[ i for i in range(idx_start, idx_end+1, 1) ]]
 	test_info = {'test_idx' : [str(i) for i in test_idx], 'year_num': kwargs['year_num'], 'week_num':kwargs['week_num'] }
-	with open('temp/hwe_test_info.txt', 'a') as ifile:
+	with open(kwargs['save_path']+'hwe_test_info.txt', 'a') as ifile:
 		ifile.write(json.dumps(test_info)+'\n')      
 
 	data_lock = kwargs['lstm_train_data_lock']
 	with data_lock:
-		np.save('temp/X_train_hwe.npy', X_train)
-		np.save('temp/X_val_hwe.npy', X_test)
-		np.save('temp/y_train_hwe.npy', y_train)
-		np.save('temp/y_val_hwe.npy', y_test)
+		np.save(kwargs['save_path']+'X_train_hwe.npy', X_train)
+		np.save(kwargs['save_path']+'X_val_hwe.npy', X_test)
+		np.save(kwargs['save_path']+'y_train_hwe.npy', y_train)
+		np.save(kwargs['save_path']+'y_val_hwe.npy', y_test)
 
 
 def data_gen_process_vlv(*args, **kwargs):
@@ -272,12 +272,12 @@ def data_gen_process_vlv(*args, **kwargs):
 	idx_start = idx_end - X_test.shape[0] + 1
 	test_idx = df.index[[ i for i in range(idx_start, idx_end+1, 1) ]]
 	test_info = {'test_idx' : [str(i) for i in test_idx], 'year_num': kwargs['year_num'], 'week_num':kwargs['week_num'] }
-	with open('temp/vlv_test_info.txt', 'a') as ifile:
+	with open(kwargs['save_path']+'temp/vlv_test_info.txt', 'a') as ifile:
 		ifile.write(json.dumps(test_info)+'\n')      
 
 	data_lock = kwargs['lstm_train_data_lock']
 	with data_lock:
-		np.save('temp/X_train_vlv.npy', X_train)
-		np.save('temp/X_val_vlv.npy', X_test)
-		np.save('temp/y_train_vlv.npy', y_train)
-		np.save('temp/y_val_vlv.npy', y_test)
+		np.save(kwargs['save_path']+'X_train_vlv.npy', X_train)
+		np.save(kwargs['save_path']+'X_val_vlv.npy', X_test)
+		np.save(kwargs['save_path']+'y_train_vlv.npy', y_train)
+		np.save(kwargs['save_path']+'y_val_vlv.npy', y_test)
