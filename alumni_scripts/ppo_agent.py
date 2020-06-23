@@ -50,7 +50,7 @@ def train_agent(agent, env=None, steps=30000, tb_log_name = "../log/ppo2_event_f
 	"""
 	if env is not None:
 		agent.set_env(env)
-	trained_agent = agent.learn(total_timesteps=steps, callback=CustomCallBack, tb_log_name=tb_log_name)
+	trained_agent = agent.learn(total_timesteps=steps, callback=CustomCallBack)
 
 	return trained_agent
 
@@ -97,7 +97,7 @@ def CustomCallBack(_locals, _globals):
 				best_mean_reward = mean_reward
 				# Example for saving best model
 				print("Saving new best model")
-				self_.save(self_.model_save_dir + 'best_model.pkl')
+				self_.save(self_.model_save_dir + 'best_rl_agent')
 	total_time_steps += self_.env.num_envs
 
 	return True
