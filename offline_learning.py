@@ -19,21 +19,6 @@ with warnings.catch_warnings():
 	from alumni_scripts import model_learn as mdlearn
 	from alumni_scripts import alumni_data_utils as a_utils
 
-def controller_learn():
-	"""
-	Learn the controller on a data-driven simulator of the environment
-	"""
-
-	raise NotImplementedError
-
-
-def data_processing():
-	"""
-	Creating a data base which may be queried to get relevant data
-	"""
-
-	raise NotImplementedError
-
 
 def control_loop():
 	"""
@@ -69,12 +54,17 @@ if __name__ == "__main__":
 		'save_path': save_path, 'name': 'vlv', 'epochs' : 100
 	}
 
+	exp_params['env_config'] = 
+
 	lstm_data_available = Event()  # new data available for lstm relearning
 	end_learning = Event()  # end the relearning procedure
 	env_data_available = Event()  # new data available for alumni env rl learning
+	lstm_weights_available = Event()  # trained lstm models are avilable
+	agent_model_available = Event()  # trained controller weights are availalbe for "online" deployment
+
 	lstm_train_data_lock = Lock()  # read / write lstm data without access issues
 	lstm_weights_lock = Lock()  # read / write lstm weights without access issues
-	env_train_data_lock = Lock()
+	env_train_data_lock = Lock()  # read / write env data without access issues
 	
 	# both of the two below is obtained from meta_data.json
 	with open('alumni_scripts/meta_data.json', 'r') as fp:
@@ -114,6 +104,7 @@ if __name__ == "__main__":
 								'end_learning':end_learning,
 								'lstm_train_data_lock':lstm_train_data_lock,
 								'lstm_weights_lock':lstm_weights_lock,
+								'lstm_weights_available':lstm_weights_available,
 								'cwe_model_config':exp_params['cwe_model_config'],
 								'hwe_model_config':exp_params['hwe_model_config'],
 								'vlv_model_config':exp_params['vlv_model_config'],
