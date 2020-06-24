@@ -40,6 +40,8 @@ def controller_learn(*args, **kwargs):
 		# after last read then run controller training --!! To ber set to clear for offline training
 		if ( env_data_available.is_set() & lstm_weights_available.is_set() & (not agent_weights_available.is_set()) ):
 
+			print("******Entering Control Learn Loop*******")
+
 			with env_train_data_lock:
 				df_scaled = read_pickle(kwargs['env_config']['save_path']+'env_data.pkl')
 			df_scaled_stats = df_scaled.describe()
@@ -65,7 +67,7 @@ def controller_learn(*args, **kwargs):
 				totaldf_stats = df_scaled_stats,
 				obs_space_vars=kwargs['env_config']['obs_space_vars'],
 				action_space_vars=kwargs['env_config']['action_space_vars'],
-				action_space_bounds=[[-2.0], [2.0]],  # bounds for real world action space; is scaled
+				action_space_bounds=[[-4.0], [4.0]],  # bounds for real world action space; is scaled
 				# internally using the reward_params
 
 				cwe_energy_model=cwe_energy_model,
@@ -105,6 +107,7 @@ def controller_learn(*args, **kwargs):
 				agent = ppo_agent.get_agent(env=env, 
 											model_save_dir=kwargs['env_config']['model_path'],
 											monitor_log_dir = kwargs['env_config']['logs'])
+				agent_created = True
 			# ** agent uses "monitor_log_dir" to update agent by looking at rewards
 			
 			"""Start training the agent"""
@@ -125,6 +128,8 @@ def controller_learn(*args, **kwargs):
 			writeheader = False  # don't write header after first iteration
 
 			interval += 1
+
+			print("******End Control Learn Loop 1 iteration*******")
 
 			# if no more learning is needed end this thread
 			if end_learning.is_set():
