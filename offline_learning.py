@@ -40,7 +40,7 @@ if __name__ == "__main__":
 	# number of epochs to train dynamic models
 	epochs = 100
 	# num of steps to learn rl in each train method
-	rl_train_steps = 20000
+	rl_train_steps = 6000
 	# time stamp of the last time point in the test data
 	time_stamp = datetime(year = 2018, month = 11, day = 7, hour=0, minute=0, second=0)
 
@@ -164,8 +164,8 @@ if __name__ == "__main__":
 	)
 	ctrl_learn_th.start()
 
+	ctrl_learn_th.join()
 	model_learn_th.join()
 	data_gen_th.join()
-	ctrl_learn_th.join()
 	print("End of program execution")
 
