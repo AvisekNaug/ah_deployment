@@ -25,6 +25,7 @@ def data_driven_model_learn(*args, **kwargs):
 	# check variables
 	models_created = False
 	eval_interval = 1
+	to_break = False
 
 	# Read the processed data and learn the 3 models inside a conditional loop
 	while True:
@@ -113,6 +114,8 @@ def data_driven_model_learn(*args, **kwargs):
 			vlv_model.re_init_layers()
 			
 			# if no more learning is needed end this thread
-			if end_learning.is_set():
+			if to_break:
 				break
+			if end_learning.is_set():  # break after the next loop
+				to_break = True
 

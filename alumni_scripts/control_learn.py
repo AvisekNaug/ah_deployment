@@ -29,11 +29,12 @@ def controller_learn(*args, **kwargs):
 	env_train_data_lock : Lock = kwargs['env_train_data_lock']  # prevent data read/write access
 	lstm_weights_lock : Lock = kwargs['lstm_weights_lock']  # prevent data read/write access
 	agent_weights_lock : Lock = kwargs['agent_weights_lock']  # prevent data read/write access
-
+	# check variables
 	interval = 1
 	env_created = False
 	agent_created = False
 	writeheader = True
+	to_break = False
 
 	while True:
 
@@ -135,5 +136,7 @@ def controller_learn(*args, **kwargs):
 			print("******End Control Learn Loop 1 iteration*******")
 
 			# if no more learning is needed end this thread
-			if end_learning.is_set():
+			if to_break:
 				break
+			if end_learning.is_set():  # break after the next loop
+				to_break = True
