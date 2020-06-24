@@ -68,6 +68,7 @@ class nn_model(datadrivenmodel):
 		self.input_timesteps = kwargs['input_timesteps']
 		self.input_dim = kwargs['input_dim']
 		self.save_path = kwargs['save_path']
+		self.model_path = kwargs['model_path']
 		self.timegap = kwargs['timegap']*5
 		self.epochs = 0
 		self.initial_epoch = 0
@@ -152,7 +153,7 @@ class nn_model(datadrivenmodel):
 		"""
 		Create callbacks
 		"""
-		self.modelchkpt = ModelCheckpoint(self.save_path +self.name+' best_model',
+		self.modelchkpt = ModelCheckpoint(self.model_path +self.name+'_best_model',
 			monitor = 'val_loss', save_best_only = True, period=2)
 		self.earlystopping = EarlyStopping(monitor = 'val_loss', patience=5, restore_best_weights=False)
 		self.reduclronplateau = ReduceLROnPlateau(monitor = 'val_loss', patience=2, cooldown = 3)
