@@ -23,6 +23,7 @@ def controller_learn(*args, **kwargs):
 	env_data_available : Event = kwargs['env_data_available']  # new data available for env relearning
 	lstm_weights_available : Event = kwargs['lstm_weights_available']  # lstm weights are available for alumni env
 	agent_weights_available : Event = kwargs['agent_weights_available']  # deploy loop can read the agent weights now
+	end_learning : Event = kwargs['end_learning']  # to break out of non-stoping learning offline
 
 	env_train_data_lock : Lock = kwargs['env_train_data_lock']  # prevent data read/write access
 	lstm_weights_lock : Lock = kwargs['lstm_weights_lock']  # prevent data read/write access
@@ -40,18 +41,18 @@ def controller_learn(*args, **kwargs):
 		if ( env_data_available.is_set() & lstm_weights_available.is_set() & (not agent_weights_available.is_set()) ):
 
 			with env_train_data_lock:
-				df_scaled = read_pickle(kwargs['save_path']+'env_data.pkl')
+				df_scaled = read_pickle(kwargs['env_config']['save_path']+'env_data.pkl')
 			df_scaled_stats = df_scaled.describe()
 			env_data_available.clear()
 
 			with lstm_weights_lock:
-				cwe_energy_model  =load_model(kwargs['save_path']+'cwe best_model')
-				hwe_energy_model  =load_model(kwargs['save_path']+'hwe best_model')
-				vlv_energy_model  =load_model(kwargs['save_path']+'vlv best_model')
+				cwe_energy_model  =load_model(kwargs['env_config']['model_path']+'cwe best_model')
+				hwe_energy_model  =load_model(kwargs['env_config']['model_path']+'hwe best_model')
+				vlv_energy_model  =load_model(kwargs['env_config']['model_path']+'vlv best_model')
 			lstm_weights_available.clear()
 
 			"""create environment with new data"""
-			monitor_dir = kwargs['logs']+'Interval_{}/'.format(interval)
+			monitor_dir = kwargs['env_config']['logs']+'Interval_{}/'.format(interval)
 
 			
 			"""Arguments to be fed to the custom environment inside make_vec_env"""
@@ -62,22 +63,22 @@ def controller_learn(*args, **kwargs):
 			env_kwargs = dict(  #  Optional keyword argument to pass to the env constructor
 				df = df_scaled,
 				totaldf_stats = df_scaled_stats,
-				obs_space_vars=kwargs['obs_space_vars'],
-				action_space_vars=kwargs['action_space_vars'],
+				obs_space_vars=kwargs['env_config']['obs_space_vars'],
+				action_space_vars=kwargs['env_config']['action_space_vars'],
 				action_space_bounds=[[-2.0], [2.0]],  # bounds for real world action space; is scaled
 				# internally using the reward_params
 
 				cwe_energy_model=cwe_energy_model,
-				cwe_input_vars=kwargs['cwe_inputs'],
-				cwe_input_shape=(1, 1, len(kwargs['cwe_inputs'])),
+				cwe_input_vars=kwargs['env_config']['cwe_inputs'],
+				cwe_input_shape=(1, 1, len(kwargs['env_config']['cwe_inputs'])),
 
 				hwe_energy_model=hwe_energy_model,
-				hwe_input_vars=kwargs['hwe_inputs'],
-				hwe_input_shape=(1, 1, len(kwargs['hwe_inputs'])),
+				hwe_input_vars=kwargs['env_config']['hwe_inputs'],
+				hwe_input_shape=(1, 1, len(kwargs['env_config']['hwe_inputs'])),
 
 				vlv_state_model=vlv_energy_model,
-				vlv_input_vars=kwargs['vlv_inputs'],
-				vlv_input_shape=(1, 1, len(kwargs['vlv_inputs'])),
+				vlv_input_vars=kwargs['env_config']['vlv_inputs'],
+				vlv_input_shape=(1, 1, len(kwargs['env_config']['vlv_inputs'])),
 
 				**reward_params  # the reward adjustment parameters
 			)
@@ -102,8 +103,9 @@ def controller_learn(*args, **kwargs):
 			"""provide envrionment to the new rl agent for ppo to decide its state and actions spaces"""
 			if not agent_created:
 				agent = ppo_agent.get_agent(env=env, 
-											model_save_dir=kwargs['save_path'],
-											monitor_log_dir = kwargs['logs'])
+											model_save_dir=kwargs['env_config']['model_path'],
+											monitor_log_dir = kwargs['env_config']['logs'])
+			# ** agent uses "monitor_log_dir" to update agent by looking at rewards
 			
 			"""Start training the agent"""
 			env.env_method('trainenv')
@@ -113,13 +115,18 @@ def controller_learn(*args, **kwargs):
 			"""test rl model"""
 			env.env_method('testenv')
 			# provide path to the current best rl agent weights and test it
-			best_rl_agent_path = kwargs['save_path'] + 'best_rl_agent'
+			best_rl_agent_path = kwargs['env_config']['model_path'] + 'best_rl_agent'
 			with agent_weights_lock:
 				test_perf_log = ppo_agent.test_agent(best_rl_agent_path, env, num_episodes=1)
 			#agent_weights_available.set()  # agent weights are available for deployment thread
 			# save the performance data
-			rl_perf_save(test_perf_log_list=test_perf_log, log_dir=kwargs['save_path'],
+			rl_perf_save(test_perf_log_list=test_perf_log, log_dir=kwargs['rl_perf_data'],
 							 save_as= 'csv', header=writeheader)
 			writeheader = False  # don't write header after first iteration
 
 			interval += 1
+
+			# if no more learning is needed end this thread
+			if end_learning.is_set():
+				end_learning.clear()
+				break
