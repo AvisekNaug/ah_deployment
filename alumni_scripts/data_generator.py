@@ -46,8 +46,9 @@ def offline_data_gen(*args, **kwargs):
 
 	while True:
 
-		"""relearning interval decider: here it is a condition; for online it will be time interval or error measure"""
-		if not (lstm_data_available.is_set() | env_data_available.is_set()):
+		"""relearning interval decider: here it is a condition; for online it will be time interval or error measure 
+		along side the already exisitng conditions"""
+		if not (lstm_data_available.is_set() | env_data_available.is_set()):  # or condition prevents faster overwrite for env data
 
 
 			result_obj = client.query("select * from {} where time >= '{}' - 13w \
@@ -73,7 +74,7 @@ def offline_data_gen(*args, **kwargs):
 										})
 			data_gen_process_env_th = Thread(target=data_gen_process_env, daemon=False, 
 										kwargs={
-										'df' : result_obj[kwargs['measurement']].loc[:,kwargs['env_vars']],
+										'df' : result_obj[kwargs['measurement']],
 										'agg': kwargs['agg'], 'scaler': kwargs['scaler'],
 										'save_path':kwargs['save_path']
 										})
@@ -160,13 +161,13 @@ def data_gen_process_cwe(*args, **kwargs):
 	idx_start = idx_end - X_test.shape[0] + 1
 	test_idx = df.index[[ i for i in range(idx_start, idx_end+1, 1) ]]
 	test_info = {'test_idx' : [str(i) for i in test_idx], 'year_num': kwargs['year_num'], 'week_num':kwargs['week_num'] }
-	with open(kwargs['save_path']+'cwe_test_info.txt', 'a') as ifile:
+	with open(kwargs['save_path']+'cwe_data/cwe_test_info.txt', 'a') as ifile:
 		ifile.write(json.dumps(test_info)+'\n')      
 
-	np.save(kwargs['save_path']+'X_train_cwe.npy', X_train)
-	np.save(kwargs['save_path']+'X_val_cwe.npy', X_test)
-	np.save(kwargs['save_path']+'y_train_cwe.npy', y_train)
-	np.save(kwargs['save_path']+'y_val_cwe.npy', y_test)
+	np.save(kwargs['save_path']+'cwe_data/cwe_X_train.npy', X_train)
+	np.save(kwargs['save_path']+'cwe_data/cwe_X_val.npy', X_test)
+	np.save(kwargs['save_path']+'cwe_data/cwe_y_train.npy', y_train)
+	np.save(kwargs['save_path']+'cwe_data/cwe_y_val.npy', y_test)
 
 
 def data_gen_process_hwe(*args, **kwargs):
@@ -225,13 +226,13 @@ def data_gen_process_hwe(*args, **kwargs):
 	idx_start = idx_end - X_test.shape[0] + 1
 	test_idx = df.index[[ i for i in range(idx_start, idx_end+1, 1) ]]
 	test_info = {'test_idx' : [str(i) for i in test_idx], 'year_num': kwargs['year_num'], 'week_num':kwargs['week_num'] }
-	with open(kwargs['save_path']+'hwe_test_info.txt', 'a') as ifile:
+	with open(kwargs['save_path']+'hwe_data/hwe_test_info.txt', 'a') as ifile:
 		ifile.write(json.dumps(test_info)+'\n')      
 
-	np.save(kwargs['save_path']+'X_train_hwe.npy', X_train)
-	np.save(kwargs['save_path']+'X_val_hwe.npy', X_test)
-	np.save(kwargs['save_path']+'y_train_hwe.npy', y_train)
-	np.save(kwargs['save_path']+'y_val_hwe.npy', y_test)
+	np.save(kwargs['save_path']+'hwe_data/hwe_X_train.npy', X_train)
+	np.save(kwargs['save_path']+'hwe_data/hwe_X_val.npy', X_test)
+	np.save(kwargs['save_path']+'hwe_data/hwe_y_train.npy', y_train)
+	np.save(kwargs['save_path']+'hwe_data/hwe_y_val.npy', y_test)
 
 
 def data_gen_process_vlv(*args, **kwargs):
@@ -294,13 +295,13 @@ def data_gen_process_vlv(*args, **kwargs):
 	idx_start = idx_end - X_test.shape[0] + 1
 	test_idx = df.index[[ i for i in range(idx_start, idx_end+1, 1) ]]
 	test_info = {'test_idx' : [str(i) for i in test_idx], 'year_num': kwargs['year_num'], 'week_num':kwargs['week_num'] }
-	with open(kwargs['save_path']+'temp/vlv_test_info.txt', 'a') as ifile:
+	with open(kwargs['save_path']+'vlv_data/vlv_test_info.txt', 'a') as ifile:
 		ifile.write(json.dumps(test_info)+'\n')      
 
-	np.save(kwargs['save_path']+'X_train_vlv.npy', X_train)
-	np.save(kwargs['save_path']+'X_val_vlv.npy', X_test)
-	np.save(kwargs['save_path']+'y_train_vlv.npy', y_train)
-	np.save(kwargs['save_path']+'y_val_vlv.npy', y_test)
+	np.save(kwargs['save_path']+'vlv_data/vlv_X_train.npy', X_train)
+	np.save(kwargs['save_path']+'vlv_data/vlv_X_val.npy', X_test)
+	np.save(kwargs['save_path']+'vlv_data/vlv_y_train.npy', y_train)
+	np.save(kwargs['save_path']+'vlv_data/vlv_y_val.npy', y_test)
 
 
 def data_gen_process_env(*args, **kwargs):
@@ -334,8 +335,14 @@ def data_gen_process_env(*args, **kwargs):
 	# creating sat-oat for the data
 	df['sat-oat'] = df['sat'] - df['oat']
 
+	# create avg_stpt column
+	stpt_cols = [ele for ele in df.columns if 'vrf' in ele]
+	df['avg_stpt'] = df[[stpt_cols]].mean(axis=1)
+	# drop individual set point cols
+	df.drop( columns = stpt_cols, inplace = True)
+
 	# save the data frame
-	df.to_pickle(kwargs['save_path']+'env_data.pkl')
+	df.to_pickle(kwargs['save_path']+'env_data/env_data.pkl')
 
 
 def online_data_gen(*args, **kwargs):
