@@ -222,7 +222,7 @@ class Env(gym.Env):
 						'reward_energy': reward_energy,
 						'reward_comfort': reward_comfort,
 						'oat': s.loc[s.index[0], 'oat'],
-						'orh': s.loc[s.index[0], 'orh'],
+						'oah': s.loc[s.index[0], 'oah'],
 						'wbt': s.loc[s.index[0], 'wbt'],
 						# 'rl_sat': s.loc[s.index[0], 'sat'],
 						'T_rl_disch': T_rl_disch,
