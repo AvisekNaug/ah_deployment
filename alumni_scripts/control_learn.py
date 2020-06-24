@@ -1,6 +1,7 @@
 """
 This scripts contains methods that run learn the rl agent for control
 """
+import numpy as np
 
 import warnings
 with warnings.catch_warnings():
@@ -48,9 +49,9 @@ def controller_learn(*args, **kwargs):
 			env_data_available.clear()
 
 			with lstm_weights_lock:
-				cwe_energy_model  =load_model(kwargs['env_config']['model_path']+'cwe best_model')
-				hwe_energy_model  =load_model(kwargs['env_config']['model_path']+'hwe best_model')
-				vlv_energy_model  =load_model(kwargs['env_config']['model_path']+'vlv best_model')
+				cwe_energy_model  =load_model(kwargs['env_config']['model_path']+'cwe_best_model')
+				hwe_energy_model  =load_model(kwargs['env_config']['model_path']+'hwe_best_model')
+				vlv_energy_model  =load_model(kwargs['env_config']['model_path']+'vlv_best_model')
 			lstm_weights_available.clear()
 
 			"""create environment with new data"""
@@ -61,7 +62,9 @@ def controller_learn(*args, **kwargs):
 			reward_params = {'energy_saved': 100.0, 'energy_savings_thresh': 0.0,
 							 'energy_penalty': -100.0, 'energy_reward_weight': 0.5,
 							 'comfort': 1.0, 'comfort_thresh': 0.10,
-							 'uncomfortable': -1.0, 'comfort_reward_weight': 0.5,}
+							 'uncomfortable': -1.0, 'comfort_reward_weight': 0.5,
+							 'action_minmax':[np.array([72]), np.array([65])]
+							 }
 			env_kwargs = dict(  #  Optional keyword argument to pass to the env constructor
 				df = df_scaled,
 				totaldf_stats = df_scaled_stats,
@@ -133,5 +136,4 @@ def controller_learn(*args, **kwargs):
 
 			# if no more learning is needed end this thread
 			if end_learning.is_set():
-				end_learning.clear()
 				break

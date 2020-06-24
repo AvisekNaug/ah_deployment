@@ -114,6 +114,5 @@ def data_driven_model_learn(*args, **kwargs):
 			
 			# if no more learning is needed end this thread
 			if end_learning.is_set():
-				end_learning.clear()
 				break
 

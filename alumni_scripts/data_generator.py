@@ -96,15 +96,15 @@ def offline_data_gen(*args, **kwargs):
 				data_gen_process_hwe_th.start()
 				data_gen_process_hwe_th.join()
 			
-			#lstm_data_available.set()  # data is now available for lstm training
-			#env_data_available.set()  # data is now available for agent and env training
+			lstm_data_available.set()  # data is now available for lstm training
+			env_data_available.set()  # data is now available for agent and env training
 		
 			time_stamp += timedelta(days=kwargs['relearn_interval_days'])
 			week_num += 1
 			week_num = week_num if week_num%53 != 0 else 1
 			year_num = year_num if week_num!= 1 else year_num+1
 
-			if week_num == 49:  # can be other terminating condition like year==2020 & week=5 etc
+			if week_num == 47:  # can be other terminating condition like year==2020 & week=5 etc
 				end_learning.set()
 				break
 

@@ -89,7 +89,7 @@ if __name__ == "__main__":
 
 	exp_params['env_config'] = {
 		'save_path' : env_data, 'model_path': model_path, 'logs' : log_path,
-		'obs_space_vars' : ['oat', 'orh', 'wbt', 'avg_stpt', 'sat'], 
+		'obs_space_vars' : ['oat', 'oah', 'wbt', 'avg_stpt', 'sat'], 
 		'action_space_vars' :['sat'], 
 		'cwe_inputs' : ['sat-oat', 'oah', 'wbt', 'pchw_flow'],
 		'hwe_inputs' : ['oat', 'oah', 'wbt', 'sat-oat'],
@@ -147,7 +147,7 @@ if __name__ == "__main__":
 								})
 	model_learn_th.start()
 
-	ctrl_learn_th = Thread(target=ctlearn, daemon = False,
+	ctrl_learn_th = Thread(target=ctlearn.controller_learn, daemon = False,
 						kwargs={
 							'env_config':exp_params['env_config'],
 							'env_data_available' : env_data_available,
