@@ -6,6 +6,7 @@ import os
 
 import numpy as np
 import pandas as pd
+from datetime import timedelta
 
 import gym
 from gym import spaces
@@ -22,7 +23,7 @@ class Env(gym.Env):
 				 cwe_energy_model, cwe_input_shape, cwe_input_vars,
 				 hwe_energy_model, hwe_input_shape, hwe_input_vars,
 				 vlv_state_model, vlv_input_shape, vlv_input_vars,
-				 slicepoint = 0.75,
+				 slicepoint = 12/13,
 				 **kwargs):
 
 		self.re_init_env(df,totaldf_stats,
@@ -103,8 +104,15 @@ class Env(gym.Env):
 		# Gets reset to the test data start index when entire test data is used up.
 		self.dataptr = 0
 		# Steps for specifying train and test data indices
-		self.slicepoint = slicepoint
-		self.train_data_limit = int(self.slicepoint * self.nrows)
+
+		test_start = df.index[-1]-timedelta(days=7)
+		test_end = df.index[-1]
+		df_t = df.loc[test_start:test_end,:]
+		self.train_data_limit = self.nrows - df_t.shape[0]
+
+		#self.slicepoint = slicepoint
+		#self.train_data_limit = int(self.slicepoint * self.nrows)
+
 		self.test_data_limit = self.nrows
 		# episode_length: dictates number of steps in an episode
 		self.episode_length = 1544  # self.train_data_limit 20
