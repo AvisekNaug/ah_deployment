@@ -46,19 +46,21 @@ def data_driven_model_learn(*args, **kwargs):
 			print("****Models Created****")
 
 		# data is available and prev models have been read by env
-		if (lstm_data_available.is_set() & (not lstm_weights_available.is_set())):  
+		if (lstm_data_available.is_set() & (not lstm_weights_available.is_set())): 
+
+			print("******Entering Model Learn Loop*******") 
 
 			""" Read the train and eval data """
 			with lstm_train_data_lock:
-				X_train_cwe, y_train_cwe, X_val_cwe, y_val_cwe = np.load(kwargs['save_path']+'X_train_cwe.npy'),\
-					np.load(kwargs['save_path']+'y_train_cwe.npy'), np.load(kwargs['save_path']+'X_val_cwe.npy'), \
-					np.load(kwargs['save_path']+'y_val_cwe.npy')
-				X_train_hwe, y_train_hwe, X_val_hwe, y_val_hwe = np.load(kwargs['save_path']+'X_train_hwe.npy'),\
-					np.load(kwargs['save_path']+'y_train_hwe.npy'), np.load(kwargs['save_path']+'X_val_hwe.npy'), \
-					np.load(kwargs['save_path']+'y_val_hwe.npy')
-				X_train_vlv, y_train_vlv, X_val_vlv, y_val_vlv = np.load(kwargs['save_path']+'X_train_vlv.npy'),\
-					np.load(kwargs['save_path']+'y_train_vlv.npy'), np.load(kwargs['save_path']+'X_val_vlv.npy'), \
-					np.load(kwargs['save_path']+'y_val_vlv.npy')
+				X_train_cwe, y_train_cwe, X_val_cwe, y_val_cwe = np.load(kwargs['save_path']+'cwe_data/cwe_X_train.npy'),\
+					np.load(kwargs['save_path']+'cwe_data/cwe_y_train.npy'), np.load(kwargs['save_path']+'cwe_data/cwe_X_val.npy'), \
+					np.load(kwargs['save_path']+'cwe_data/cwe_y_val.npy')
+				X_train_hwe, y_train_hwe, X_val_hwe, y_val_hwe = np.load(kwargs['save_path']+'hwe_data/hwe_X_train.npy'),\
+					np.load(kwargs['save_path']+'hwe_data/hwe_y_train.npy'), np.load(kwargs['save_path']+'hwe_data/hwe_X_val.npy'), \
+					np.load(kwargs['save_path']+'hwe_data/hwe_y_val.npy')
+				X_train_vlv, y_train_vlv, X_val_vlv, y_val_vlv = np.load(kwargs['save_path']+'vlv_data/vlv_X_train.npy'),\
+					np.load(kwargs['save_path']+'vlv_data/vlv_y_train.npy'), np.load(kwargs['save_path']+'vlv_data/vlv_X_val.npy'), \
+					np.load(kwargs['save_path']+'vlv_data/vlv_y_val.npy')
 			lstm_data_available.clear()
 
 			""" Begin the training """
@@ -85,22 +87,24 @@ def data_driven_model_learn(*args, **kwargs):
 				# weights are available
 				lstm_weights_available.set()
 
+			print("******End Model Learn stage Iteration 1*******") 
+
 			"""Prediction"""
 			# predict on test data cwe
 			cwe_prediction, cwe_target = cwe_model.predict(**{'X_test':X_val_cwe}).flatten(), y_val_cwe.flatten()
 			# save the output
-			np.save('temp/cwe_prediction_interval_{}'.format(eval_interval), cwe_prediction)
-			np.save('temp/cwe_target_interval_{}'.format(eval_interval), cwe_target)
+			np.save(kwargs['save_path']+'cwe_data/cwe_prediction_interval_{}.npy'.format(eval_interval), cwe_prediction)
+			np.save(kwargs['save_path']+'cwe_data/cwe_target_interval_{}.npy'.format(eval_interval), cwe_target)
 			# predict on test data hwe
 			hwe_prediction, hwe_target = hwe_model.predict(**{'X_test':X_val_hwe}).flatten(), y_val_hwe.flatten()
 			# save the output
-			np.save('temp/hwe_prediction_interval_{}'.format(eval_interval), hwe_prediction)
-			np.save('temp/hwe_target_interval_{}'.format(eval_interval), hwe_target)
+			np.save(kwargs['save_path']+'hwe_data/hwe_prediction_interval_{}.npy'.format(eval_interval), hwe_prediction)
+			np.save(kwargs['save_path']+'hwe_data/hwe_target_interval_{}.npy'.format(eval_interval), hwe_target)
 			# predict on test data vlv
 			vlv_prediction, vlv_target = vlv_model.predict(**{'X_test':X_val_vlv}), y_val_hwe
 			# save the output
-			np.save('temp/vlv_pred_interval_{}'.format(eval_interval), vlv_prediction)
-			np.save('temp/vlv_target_interval_{}'.format(eval_interval), vlv_target)
+			np.save(kwargs['save_path']+'vlv_data/vlv_pred_interval_{}.npy'.format(eval_interval), vlv_prediction)
+			np.save(kwargs['save_path']+'vlv_data/vlv_target_interval_{}.npy'.format(eval_interval), vlv_target)
 			eval_interval += 1
 
 			"""re-init lstm certanin layers"""
