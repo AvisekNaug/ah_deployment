@@ -26,7 +26,6 @@ from keras.utils import to_categorical
 
 def offline_data_gen(*args, **kwargs):
 
-
 	time_stamp = kwargs['time_stamp']
 	# year and week
 	year_num, week_num, _ = time_stamp.isocalendar()
@@ -53,6 +52,8 @@ def offline_data_gen(*args, **kwargs):
 
 			result_obj = client.query("select * from {} where time >= '{}' - 13w \
 								and time < '{}'".format(kwargs['measurement'], str(time_stamp), str(time_stamp)))
+			df_env = result_obj[kwargs['measurement']]
+			df_env = df_env.drop(columns = ['data_cleaned', 'aggregated', 'time-interval'])
 
 			data_gen_process_cwe_th = Thread(target=data_gen_process_cwe, daemon=False,
 										kwargs={ 
@@ -74,26 +75,29 @@ def offline_data_gen(*args, **kwargs):
 										})
 			data_gen_process_env_th = Thread(target=data_gen_process_env, daemon=False, 
 										kwargs={
-										'df' : result_obj[kwargs['measurement']],
+										'df' : df_env,
 										'agg': kwargs['agg'], 'scaler': kwargs['scaler'],
 										'save_path':kwargs['save_path']
 										})
 
 
 			with lstm_train_data_lock:
-				with env_train_data_lock:
-					data_gen_process_cwe_th.start()
-					data_gen_process_hwe_th.start()
-					data_gen_process_vlv_th.start()
-					data_gen_process_env_th.start()
-					data_gen_process_cwe_th.join()
-					data_gen_process_hwe_th.join()
-					data_gen_process_vlv_th.join()
-					data_gen_process_env_th.join()
-
+				data_gen_process_cwe_th.start()
+				data_gen_process_vlv_th.start()
+				data_gen_process_cwe_th.join()
+				data_gen_process_vlv_th.join()
 			
-			lstm_data_available.set()  # data is now available for lstm training
-			env_data_available.set()  # data is now available for agent and env training
+			with env_train_data_lock:
+				
+				data_gen_process_env_th.start()
+				data_gen_process_env_th.join()
+
+			with lstm_train_data_lock:
+				data_gen_process_hwe_th.start()
+				data_gen_process_hwe_th.join()
+			
+			#lstm_data_available.set()  # data is now available for lstm training
+			#env_data_available.set()  # data is now available for agent and env training
 		
 			time_stamp += timedelta(days=kwargs['relearn_interval_days'])
 			week_num += 1
@@ -172,6 +176,7 @@ def data_gen_process_cwe(*args, **kwargs):
 
 def data_gen_process_hwe(*args, **kwargs):
 	
+	# try:
 	# read the data from the database
 	df = kwargs['df'].copy()
 
@@ -233,6 +238,10 @@ def data_gen_process_hwe(*args, **kwargs):
 	np.save(kwargs['save_path']+'hwe_data/hwe_X_val.npy', X_test)
 	np.save(kwargs['save_path']+'hwe_data/hwe_y_train.npy', y_train)
 	np.save(kwargs['save_path']+'hwe_data/hwe_y_val.npy', y_test)
+	
+	# except Exception:
+	# 	import traceback
+	# 	print(traceback.format_exc())
 
 
 def data_gen_process_vlv(*args, **kwargs):
@@ -337,7 +346,7 @@ def data_gen_process_env(*args, **kwargs):
 
 	# create avg_stpt column
 	stpt_cols = [ele for ele in df.columns if 'vrf' in ele]
-	df['avg_stpt'] = df[[stpt_cols]].mean(axis=1)
+	df['avg_stpt'] = df[stpt_cols].mean(axis=1)
 	# drop individual set point cols
 	df.drop( columns = stpt_cols, inplace = True)
 
