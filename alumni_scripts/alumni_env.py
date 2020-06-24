@@ -64,7 +64,7 @@ class Env(gym.Env):
 				 cwe_energy_model, cwe_input_shape, cwe_input_vars,
 				 hwe_energy_model, hwe_input_shape, hwe_input_vars,
 				 vlv_state_model, vlv_input_shape, vlv_input_vars,
-				 slicepoint = 0.75,
+				 slicepoint = 12/13,
 				 **kwargs):
 		"""Custom method to reinitialize the environment
 		"""
@@ -223,6 +223,7 @@ class Env(gym.Env):
 						'reward_comfort': reward_comfort,
 						'oat': s.loc[s.index[0], 'oat'],
 						'orh': s.loc[s.index[0], 'orh'],
+						'wbt': s.loc[s.index[0], 'wbt'],
 						# 'rl_sat': s.loc[s.index[0], 'sat'],
 						'T_rl_disch': T_rl_disch,
 						'avg_stpt': s.loc[s.index[0], 'avg_stpt']
