@@ -130,7 +130,7 @@ def data_gen_process_cwe(*args, **kwargs):
 		else: rolling_mean_target.append(col_name)
 	
 	df[rolling_sum_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_sum_target)
-	df[rolling_mean_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_mean_target)
+	df[rolling_mean_target] =  a_utils.window_mean(df, window_size=6, column_names=rolling_mean_target)
 	df = a_utils.dropNaNrows(df)
 
 
@@ -196,7 +196,7 @@ def data_gen_process_hwe(*args, **kwargs):
 		else: rolling_mean_target.append(col_name)
 	
 	df[rolling_sum_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_sum_target)
-	df[rolling_mean_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_mean_target)
+	df[rolling_mean_target] =  a_utils.window_mean(df, window_size=6, column_names=rolling_mean_target)
 	df = a_utils.dropNaNrows(df)
 
 
@@ -265,7 +265,7 @@ def data_gen_process_vlv(*args, **kwargs):
 		else: rolling_mean_target.append(col_name)
 	
 	df[rolling_sum_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_sum_target)
-	df[rolling_mean_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_mean_target)
+	df[rolling_mean_target] =  a_utils.window_mean(df, window_size=6, column_names=rolling_mean_target)
 	df = a_utils.dropNaNrows(df)
 
 
@@ -333,7 +333,7 @@ def data_gen_process_env(*args, **kwargs):
 		else: rolling_mean_target.append(col_name)
 	
 	df[rolling_sum_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_sum_target)
-	df[rolling_mean_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_mean_target)
+	df[rolling_mean_target] =  a_utils.window_mean(df, window_size=6, column_names=rolling_mean_target)
 	df = a_utils.dropNaNrows(df)
 
 
@@ -376,11 +376,17 @@ def online_data_gen(*args, **kwargs):
 	env_train_data_lock : Lock = kwargs['env_train_data_lock']  # prevent dataloop from writing data  # pylint: disable=unused-variable
 
 	# relearn interval in date time format
-	relearn_interval_kwargs = kwargs['relearn_interval_kwargs']
+	relearn_interval_kwargs = kwargs['relearn_interval_kwargs']  # eg {'days':6, 'hours':23, 'minutes':50, 'seconds':0}
 
 	# time at which this method started: used for book triggering relearn loop
 	last_train_time = datetime.now()
 	year_num, week_num, _ = last_train_time.isocalendar()
+
+	#get auth api and meta data dictionary
+	with open('auths.json', 'r') as fp:
+		api_args = json.load(fp)
+	with open('alumni_scripts/meta_data.json', 'r') as fp:
+		meta_data_ = json.load(fp)
 
 	while True:  # query data at regular intervals
 
@@ -399,7 +405,7 @@ def online_data_gen(*args, **kwargs):
 			last_train_time = datetime.now()
 
 			# get the new data
-			df = get_data()
+			df = get_train_data(api_args, meta_data_)
 
 			# Thread for data preparation
 			data_gen_process_cwe_th = Thread(target=data_gen_process_cwe, daemon=False,
@@ -449,22 +455,23 @@ def online_data_gen(*args, **kwargs):
 			# sleep for 5 minutes to prevent fast loops in case relearn interval is large and 
 			# other conditions have not been satisfied
 			time.sleep(timedelta(minutes=5).seconds)
+
+		if end_learning.is_set():
+			break
 	
 
-def get_data():
+def get_train_data(api_args, meta_data_):
 
 	# arguements for the api query
-	time_args = {'trend_id' : 2681, 'save_path' : 'data/trend_data/alumni_data_tmp.csv'}
+	time_args = {'trend_id' : '2681', 'save_path' : 'data/trend_data/alumni_trend_tmp.csv'}
 	start_fields = ['start_'+i for i in ['year','month','day', 'hour', 'minute', 'second']]
-	start_time = datetime.now()
-	for i, idx in enumerate(start_fields):
-		time_args[i] = start_time.timetuple()[idx]
 	end_fields = ['end_'+i for i in ['year','month','day', 'hour', 'minute', 'second']]
-	end_time = start_time - timedelta(weeks=13)
-	for i, idx in enumerate(end_fields):
+	end_time = datetime.now()
+	start_time = end_time - timedelta(weeks=13)
+	for idx, i in enumerate(start_fields):
+		time_args[i] = start_time.timetuple()[idx]
+	for idx, i in enumerate(end_fields):
 		time_args[i] = end_time.timetuple()[idx]
-	with open('auths.json', 'r') as fp:
-		api_args = json.load(fp)
 	api_args.update(time_args)
 
 	# pull the data into csv file
@@ -487,12 +494,13 @@ def get_data():
 
 	# clean the data
 	df_cleaned = dp.offline_batch_data_clean(
-		meta_data_path = 'alumni_scripts/meta_data.json', df = df_
+		meta_data_ = meta_data_, df = df_
 	)
 	# rename the columns
-	with open('alumni_scripts/meta_data.json', 'r') as fp:
-		meta_data_ = json.load(fp)
-	df_cleaned.columns = list(meta_data_['column_aliases'].keys())
+	new_names = []
+	for i in df_cleaned.columns:
+		new_names.append(meta_data_["reverse_col_alias"][i])
+	df_cleaned.columns = new_names
 
 	return df_cleaned
 	
