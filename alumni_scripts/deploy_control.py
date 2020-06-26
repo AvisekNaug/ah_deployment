@@ -50,7 +50,7 @@ def deploy_control(*args, **kwargs):
 def get_real_obs(api_args: dict, meta_data_: dict, obs_space_vars : list):
 
 	# arguements for the api query
-	time_args = {'trend_id' : '2681', 'save_path' : '../data/trend_data/alumni_data_deployment.csv'}
+	time_args = {'trend_id' : '2681', 'save_path' : 'data/trend_data/alumni_data_deployment.csv'}
 	start_fields = ['start_'+i for i in ['year','month','day', 'hour', 'minute', 'second']]
 	end_fields = ['end_'+i for i in ['year','month','day', 'hour', 'minute', 'second']]
 	end_time = datetime.now()
@@ -65,7 +65,7 @@ def get_real_obs(api_args: dict, meta_data_: dict, obs_space_vars : list):
 	dp.pull_online_data(**api_args)
 
 	# get the dataframe from a csv
-	df_ = read_csv('../data/trend_data/alumni_data_deployment.csv', )
+	df_ = read_csv('data/trend_data/alumni_data_deployment.csv', )
 	df_['time'] = to_datetime(df_['time'])
 	df_.set_index(keys='time',inplace=True, drop = True)
 	df_ = a_utils.dropNaNrows(df_)
