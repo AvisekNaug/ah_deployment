@@ -23,14 +23,6 @@ with warnings.catch_warnings():
 	from alumni_scripts import alumni_data_utils as a_utils
 	from source import utils
 
-
-def deploy_control():
-	"""
-	Generates the actual actions to be sent to the actual building
-	"""
-
-	raise NotImplementedError
-
 if __name__ == "__main__":
 	
 	exp_params = {}
@@ -80,6 +72,7 @@ if __name__ == "__main__":
 		'save_path': hwe_data, 'model_path': model_path, 'name': 'hwe', 'epochs' : epochs
 	}
 	hwe_vars = ['oat', 'oah', 'wbt', 'sat', 'hwe']
+	
 	exp_params['vlv_model_config'] = {
 		'model_type': 'classification', 'train_batchsize' : 32,
 		'input_timesteps': 1, 'input_dim': 4, 'timegap': 6,
