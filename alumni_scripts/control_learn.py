@@ -72,7 +72,7 @@ def controller_learn(*args, **kwargs):
 				obs_space_vars=kwargs['env_config']['obs_space_vars'],
 				action_space_vars=kwargs['env_config']['action_space_vars'],
 				action_space_bounds=[[-4.0], [4.0]],  # bounds for real world action space; is scaled
-				# internally using the reward_params
+				# internally using the reward_params; the agent weights output action in this +-4 range
 
 				cwe_energy_model=cwe_energy_model,
 				cwe_input_vars=kwargs['env_config']['cwe_inputs'],
