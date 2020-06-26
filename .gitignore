@@ -13,5 +13,6 @@ raw_data
 auths.json
 tmp
 logs
+results
 # custom
 todo.txt

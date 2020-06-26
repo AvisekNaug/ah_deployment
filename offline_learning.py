@@ -39,6 +39,7 @@ if __name__ == "__main__":
 	save_path = 'tmp/'
 	model_path = 'models/'
 	log_path = 'logs/'
+	results = 'results/'
 	trend_data = 'data/trend_data/'
 	cwe_data = save_path + 'cwe_data/'
 	hwe_data = save_path + 'hwe_data/'
@@ -52,6 +53,7 @@ if __name__ == "__main__":
 	utils.make_dirs(env_data)
 	utils.make_dirs(model_path)
 	utils.make_dirs(log_path)
+	utils.make_dirs(results)
 	utils.make_dirs(rl_perf_data)
 	utils.make_dirs(trend_data)
 
