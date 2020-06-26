@@ -32,12 +32,29 @@ def deploy_control(*args, **kwargs):
 	agent_weights_available : Event = kwargs['agent_weights_available']  # deploy loop can read the agent weights now
 	agent_weights_lock : Lock = kwargs['agent_weights_lock']  # prevent data read/write access
 
+	buffer_ = None  # has to be a dequeue class of length 6 maybe
+
+	model = PPO2.load(kwargs['best_rl_agent'])
+
 	# check variables if needed
 	obs_space_vars : list = kwargs['obs_space_vars']
 
 	while True:
 
 		df = get_real_obs(api_args, meta_data_,obs_space_vars)
+
+		# convert it into numpy
+
+		# check individual values to lie in appropriate range
+		# check individual values to not move too much from previous value
+		# if they fail use average of last 4 observations from the buffer maybe
+		# substitue the sat with the sat from last predict
+
+		# add it to a queue with a buffer length of 3 hours maybe
+
+		# predict new delta and add it to new temp var for next loop check
+
+		# write it to a file
 
 
 
@@ -83,6 +100,7 @@ def get_real_obs(api_args: dict, meta_data_: dict, obs_space_vars : list):
 	df_cleaned = dp.online_data_clean(
 		meta_data_ = meta_data_, df = df_
 	)
+	# if data is removed substitute with some normal values from the buffer_
 
 	# rename the columns
 	new_names = []
