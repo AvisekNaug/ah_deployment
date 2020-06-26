@@ -698,5 +698,35 @@
             "75%": 66.47405799739406,
             "max": 86.81227544185894
         }
-    }
+    },
+    "reverse_col_alias": {
+        "Alumni_Hall_PCHWS_T value": "pchwst",
+        "CAFE_103_Indoor_Unit_50 localSetpoint": "vrf50", 
+        "AHU_1 outdoorAirTemp": "oat", "AHU_1 supplyAirTemp": "sat", 
+        "AHU_1 supplyAirTempSetpoint": "sat_stpt", 
+        "WeatherDataProfile humidity": "oah", 
+        "MEMORIAL_HALL_202_Indoor_Unit_67 localSetpoint": "vrf67", 
+        "Alumni_Hall_PCHW_Flow value": "pchw_flow", 
+        "HW_BTU_METER currentKbtuDeltaReading": "hwe", 
+        "EXERCISE_ROOM_002_Indoor_Unit_1 localSetpoint": "vrf1", 
+        "CORRIDOR_302_Indoor_Unit_30 localSetpoint": "vrf30", 
+        "COORIDOR_006A_Indoor_Unit_34 localSetpoint": "vrf34", 
+        "OFFICE_305_Indoor_Unit_74 localSetpoint": "vrf74", 
+        "CHW_BTU_METER currentKbtuDeltaReading": "cwe", 
+        "HWSP_STPT value": "hws_st_stpt", 
+        "CORRIDOR_108_Indoor_Unit_60 localSetpoint": "vrf60", 
+        "MEETING_117A_Indoor_Unit_63 localSetpoint": "vrf63", 
+        "HWS_T value": "hws_st", 
+        "HX_Valve_1 valvePosition": "hws_vlv1", 
+        "OFFICE_115_Indoor_Unit_77 localSetpoint": "vrf77", 
+        "CORRIDOR_203_Indoor_Unit_64 localSetpoint": "vrf64", 
+        "TUTORING_010_Indoor_Unit_10 localSetpoint": "vrf10", 
+        "ElectricMeterProfile currentKbtuDeltaReading": "ee", 
+        "HWR_T value": "hws_rt", 
+        "CLASS_ROOM_201_Indoor_Unit_100 localSetpoint": "vrf100", 
+        "LOUNGE_100_Indoor_Unit_40 localSetpoint": "vrf40", 
+        "Hot_Water_Flow_AI_2 value": "hws_flow", 
+        "READING_ROOM_206_Indoor_Unit_108 localSetpoint": "vrf108", 
+        "WRITING_STUDIO_113_Indoor_Unit_20 localSetpoint": "vrf20", 
+        "wbt": "wbt"}
 }
