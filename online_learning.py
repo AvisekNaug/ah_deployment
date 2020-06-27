@@ -51,7 +51,7 @@ if __name__ == "__main__":
 	utils.make_dirs(hwe_data)
 	utils.make_dirs(vlv_data)
 	utils.make_dirs(env_data)
-	utils.make_dirs(model_path)
+	# utils.make_dirs(model_path)
 	utils.make_dirs(log_path)
 	utils.make_dirs(results)
 	utils.make_dirs(rl_perf_data)
