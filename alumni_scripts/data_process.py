@@ -60,20 +60,27 @@ def offline_batch_data_clean(*args, **kwargs):
 
 	# Perform 2 standard deviation based thresholding
 	df = kwargs['df'].copy()
-	faulty_idx = np.abs(df-stats.loc['mean',:]) >= (2*stats.loc['std',:])
+	cols = df.columns
 
 	retain = False
 	if retain:
-		for col_name in df.columns:
-			#df.loc[faulty_idx[col_name], col_name] = stats.loc['mean', col_name]  # set to mean
-			t = (np.sign(df - stats.loc['mean', :]).loc[faulty_idx[col_name], col_name] *
-			 2 *stats.loc['std', col_name]) + stats.loc['mean', col_name]
-			df.loc[faulty_idx[col_name], col_name] = t  # set to upper or lower 2*std bound
+		# for col_name in df.columns:
+		# 	#df.loc[faulty_idx[col_name], col_name] = stats.loc['mean', col_name]  # set to mean
+		# 	t = (np.sign(df - stats.loc['mean', :]).loc[faulty_idx[col_name], col_name] *
+		# 	 2 *stats.loc['std', col_name]) + stats.loc['mean', col_name]
+		# 	df.loc[faulty_idx[col_name], col_name] = t  # set to upper or lower 2*std bound
+		mean = stats.loc['mean',cols].to_numpy()
+		std = stats.loc['std',cols].to_numpy()
+		lb = mean - 2*std
+		ub = mean + 2*std
+		df.clip(lower=lb, upper=ub, axis=1, inplace=True)
 											
 	else:
+		faulty_idx = np.abs(df-stats.loc['mean',cols]) >= (2*stats.loc['std',cols])
 		df = df[~faulty_idx]  # keep rows which are within bounds
 
 	return df
+
 
 # get online date
 def pull_online_data(*args, **kwargs):
@@ -97,6 +104,7 @@ def pull_online_data(*args, **kwargs):
 
 	dataframe.to_csv(kwargs['save_path'])
 
+
 # online data clean
 def online_data_clean(*args, **kwargs):
 
@@ -111,17 +119,23 @@ def online_data_clean(*args, **kwargs):
 
 	# Perform 2 standard deviation based thresholding
 	df = kwargs['df'].copy()
-	faulty_idx = np.abs(df-stats.loc['mean',:]) >= (2*stats.loc['std',:])
+	cols = df.columns
 
-	retain = False
+	retain = True
 	if retain:
-		for col_name in df.columns:
-			#df.loc[faulty_idx[col_name], col_name] = stats.loc['mean', col_name]  # set to mean
-			t = (np.sign(df - stats.loc['mean', :]).loc[faulty_idx[col_name], col_name] *
-			 2 *stats.loc['std', col_name]) + stats.loc['mean', col_name]
-			df.loc[faulty_idx[col_name], col_name] = t  # set to upper or lower 2*std bound
+		# for col_name in df.columns:
+		# 	#df.loc[faulty_idx[col_name], col_name] = stats.loc['mean', col_name]  # set to mean
+		# 	t = (np.sign(df - stats.loc['mean', :]).loc[faulty_idx[col_name], col_name] *
+		# 	 2 *stats.loc['std', col_name]) + stats.loc['mean', col_name]
+		# 	df.loc[faulty_idx[col_name], col_name] = t  # set to upper or lower 2*std bound
+		mean = stats.loc['mean',cols].to_numpy()
+		std = stats.loc['std',cols].to_numpy()
+		lb = mean - 2*std
+		ub = mean + 2*std
+		df.clip(lower=lb, upper=ub, axis=1, inplace=True)
 											
 	else:
+		faulty_idx = np.abs(df-stats.loc['mean',cols]) >= (2*stats.loc['std',cols])
 		df = df[~faulty_idx]  # keep rows which are within bounds
 
 	return df
