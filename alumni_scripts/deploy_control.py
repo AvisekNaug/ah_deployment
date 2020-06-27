@@ -4,7 +4,7 @@ and issue a temperature set point to be sent as the set point for the building.
 """
 
 import numpy as np
-from pandas import read_csv, to_datetime
+from pandas import read_csv, to_datetime, DataFrame
 import json
 from datetime import datetime, timedelta
 from multiprocessing import Event, Lock
@@ -28,6 +28,10 @@ def deploy_control(*args, **kwargs):
 		api_args = json.load(fp)
 	with open('alumni_scripts/meta_data.json', 'r') as fp:
 		meta_data_ = json.load(fp)
+	with open('experience.csv', 'a+') as cfile:
+		cfile.write('{}, {}, {}, {}, {}, {} {}\n'.format('time', 'oat', 'oah', 'wbt',
+		 'avg_stpt', 'sat', 'rlstpt'))
+	cfile.close()
 
 	agent_weights_available : Event = kwargs['agent_weights_available']  # deploy loop can read the agent weights now
 	agent_weights_lock : Lock = kwargs['agent_weights_lock']  # prevent data read/write access
@@ -36,52 +40,64 @@ def deploy_control(*args, **kwargs):
 	obs_space_vars : list = kwargs['obs_space_vars']
 	scaler : a_utils.dataframescaler = kwargs['scaler']
 	stpt_delta = np.array([0.0]) # in delta F
-	stpt = np.array([68])  # in F
-	stpt_scaled = scaler.minmax_scale(stpt, ['sat'], ['sat'])
+	stpt_unscaled = np.array([68])  # in F
+	stpt_scaled = scaler.minmax_scale(stpt_unscaled, ['sat'], ['sat'])
+	not_first_loop = False
 
-	buffer_ = None  # has to be a dequeue class of length 6 maybe
+	# an initial trained model has to exist
+	if agent_weights_available.is_set():
+		with agent_weights_lock:
+			rl_agent = PPO2.load(kwargs['best_rl_agent_path'])
+		agent_weights_available.clear()
+	else:
+		raise FileNotFoundError
 
 	while True:
+	
+		# get current scaled and uncsaled observation
+		df, df_unscaled = get_real_obs(api_args, meta_data_,obs_space_vars)
+		curr_obs_scaled = df.to_numpy().flatten()
+		curr_obs_unscaled = df_unscaled.to_numpy().flatten()
+
+		# if we want to set the sat to the exact value from previous time step
+		# comment it out if not
+		if not_first_loop:
+			curr_obs_scaled[-1] = stpt_scaled[0]
+			curr_obs_unscaled[-1] = stpt_unscaled[0]
+		else:
+			not_first_loop = True
+
+		# check individual values to lie in appropriate range
+		# already done by online_data_clean method
+
+		# check individual values to not move too much from previous value
+		# nominal values already checked within online_data_clean method
+
+		# get new agent model in case it is available
 		if agent_weights_available.is_set():
 			with agent_weights_lock:
 				rl_agent = PPO2.load(kwargs['best_rl_agent_path'])
 			agent_weights_available.clear()
-			break
-
-	while True:
-	
-		# get curretn observation
-		df = get_real_obs(api_args, meta_data_,obs_space_vars)
-		curr_obs = df.to_numpy().flatten()
-
-		# if we want to set the sat to the exact value from previous time step
-		# comment it out if not
-		curr_obs[-1] = stpt_scaled.flatten()[0]
-
-		# check individual values to lie in appropriate range
-
-
-		# check individual values to not move too much from previous value
-
-
-		# if they fail use average of last 4 observations from the buffer maybe
-
-
-		# substitue the sat with the sat from last predict
-
-
-		# add it to a queue with a buffer length of 3 hours maybe
-
 
 		# predict new delta and add it to new temp var for next loop check
-		stpt_delta = rl_agent.predict(curr_obs)
-		stpt[0] = stpt[0] + stpt_delta[0]
-		stpt_scaled = scaler.minmax_scale(stpt, ['sat'], ['sat'])
+		stpt_delta = rl_agent.predict(curr_obs_scaled)
+		stpt_unscaled[0] = stpt_unscaled[0] + stpt_delta[0]
+		stpt_scaled = scaler.minmax_scale(stpt_unscaled, ['sat'], ['sat'])
 
-		# write it to a file
+		# write it to a file for BdX
+		with open('reheat_preheat_setpoint.txt', 'w') as cfile:
+			cfile.seek(0)
+			cfile.write(float(stpt_unscaled[0]))
+		cfile.close()
 
+		# write output to file for our use
+		fout = np.concatenate((curr_obs_unscaled, stpt_unscaled))
+		with open('experience.csv', 'a+') as cfile:
+			cfile.write('{}, {:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f} {:.3f}\n'.format(datetime.now(), fout[0],
+			 fout[1], fout[2], fout[3], fout[4], fout[5]))
+		cfile.close()
 
-
+		# sleep for 30 mins before next output
 		time.sleep(timedelta(minutes=30).seconds)
 
 	raise NotImplementedError
@@ -124,7 +140,6 @@ def get_real_obs(api_args: dict, meta_data_: dict, obs_space_vars : list):
 	df_cleaned = dp.online_data_clean(
 		meta_data_ = meta_data_, df = df_
 	)
-	# if data is removed substitute with some normal values from the buffer_
 
 	# rename the columns
 	new_names = []
@@ -133,7 +148,7 @@ def get_real_obs(api_args: dict, meta_data_: dict, obs_space_vars : list):
 	df_cleaned.columns = new_names
 
 	# clip less than 0 values
-	df_cleaned.clip(lower=0)
+	df_cleaned.clip(lower=0, inplace=True)
 
 	# aggregate data
 	rolling_sum_target, rolling_mean_target = [], []
@@ -147,6 +162,9 @@ def get_real_obs(api_args: dict, meta_data_: dict, obs_space_vars : list):
 	# Sample the last half hour data
 	df_cleaned = df_cleaned.iloc[[-1],:]
 
+	# also need an unscaled version of the observation for logging
+	df_unscaled = df_cleaned.copy()
+
 	# scale the columns: here we will use min-max
 	scaler = a_utils.dataframescaler(meta_data_['column_stats_half_hour'])
 	df_cleaned[df_cleaned.columns] = scaler.minmax_scale(df_cleaned, df_cleaned.columns, df_cleaned.columns)
@@ -156,11 +174,18 @@ def get_real_obs(api_args: dict, meta_data_: dict, obs_space_vars : list):
 	df_cleaned['avg_stpt'] = df_cleaned[stpt_cols].mean(axis=1)
 	# drop individual set point cols
 	df_cleaned.drop( columns = stpt_cols, inplace = True)
-
 	# rearrange observation cols
 	df_cleaned = df_cleaned[obs_space_vars]
 
-	return df_cleaned
+	# create avg_stpt column
+	stpt_cols = [ele for ele in df_unscaled.columns if 'vrf' in ele]
+	df_unscaled['avg_stpt'] = df_unscaled[stpt_cols].mean(axis=1)
+	# drop individual set point cols
+	df_unscaled.drop( columns = stpt_cols, inplace = True)
+	# rearrange observation cols
+	df_unscaled = df_unscaled[obs_space_vars] 
+
+	return df_cleaned, df_unscaled
 
 
 
