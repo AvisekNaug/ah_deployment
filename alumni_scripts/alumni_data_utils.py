@@ -662,6 +662,7 @@ def df_2_arrays( df,
 	return [X_train, X_test, y_train, y_test]
 
 
+
 def inputreshaper(X, input_timesteps=1, output_timesteps=1):
 	"""Reshapes the input/ predictor array into (nsamples, input_timesteps, input dimension)
 	
@@ -694,6 +695,7 @@ def inputreshaper(X, input_timesteps=1, output_timesteps=1):
 	# ^^We are removing last output_timesteps-1 data due to predicting sequence of length output_timesteps
 
 	return X_reshaped
+
 
 
 def outputreshaper(y, output_timesteps=1, outputdim=1, input_timesteps=1):
@@ -729,6 +731,7 @@ def outputreshaper(y, output_timesteps=1, outputdim=1, input_timesteps=1):
 	collatedarray = np.concatenate(totalArray, axis=1)
 	y_reshaped = collatedarray.reshape((collatedarray.shape[0], N, outputdim))
 	return y_reshaped
+
 
 
 class dataframescaler():

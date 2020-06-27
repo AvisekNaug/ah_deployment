@@ -19,6 +19,7 @@ with warnings.catch_warnings():
 	from alumni_scripts import data_generator as datagen
 	from alumni_scripts import model_learn as mdlearn
 	from alumni_scripts import control_learn as ctlearn
+	from alumni_scripts import deploy_control as dctrl
 
 	from alumni_scripts import alumni_data_utils as a_utils
 	from source import utils
@@ -28,11 +29,11 @@ if __name__ == "__main__":
 	exp_params = {}
 
 	# how to set prediction sections
-	relearn_interval_days = 7
+	relearn_interval_kwargs = {'days':0, 'hours':0, 'minutes':15, 'seconds':0}
 	# number of epochs to train dynamic models
 	epochs = 100
 	# num of steps to learn rl in each train method
-	rl_train_steps = 6000
+	rl_train_steps = 5000
 	# time stamp of the last time point in the test data
 	time_stamp = datetime(year = 2018, month = 11, day = 7, hour=0, minute=0, second=0)
 
@@ -46,6 +47,9 @@ if __name__ == "__main__":
 	vlv_data = save_path + 'vlv_data/'
 	env_data = save_path + 'env_data/'
 	rl_perf_data = save_path + 'rl_perf_data/'
+
+	# path to saved agent weights
+	best_rl_agent_path = 'models/best_rl_agent'
 
 	utils.make_dirs(cwe_data)
 	utils.make_dirs(hwe_data)
@@ -101,7 +105,7 @@ if __name__ == "__main__":
 	agent_model_available = Event()  # trained controller weights are availalbe for "online" deployment
 	agent_weights_available = Event()  # agent weights are available to be read by deploy loop
 	agent_weights_available.set() # set agent weights to available in online learning as it
-	# will be immediately depoloyed
+	# will be immediately deployed
 
 	# Locks
 	lstm_train_data_lock = Lock()  # read / write lstm data without access issues
@@ -115,13 +119,21 @@ if __name__ == "__main__":
 	agg = meta_data_['column_agg_type']
 	scaler = a_utils.dataframescaler(meta_data_['column_stats_half_hour'])
 
-	data_gen_th = Thread(target=datagen.offline_data_gen, daemon = False,
-						kwargs={'time_stamp':time_stamp,
-								'lstm_data_available':lstm_data_available,
+	deploy_ctrl_th = Thread(target=dctrl.deploy_control, daemon = False,
+						kwargs={'agent_weights_available' : agent_weights_available,
+								'agent_weights_lock' : agent_weights_lock,
+								'obs_space_vars' : exp_params['env_config']['obs_space_vars'],
+								'scaler' : scaler,
+								'best_rl_agent_path' : best_rl_agent_path,
+								'relearn_interval_kwargs' : relearn_interval_kwargs
+						})
+	deploy_ctrl_th.start()
+
+	data_gen_th = Thread(target=datagen.online_data_gen, daemon = False,
+						kwargs={'lstm_data_available':lstm_data_available,
 								'end_learning':end_learning,
 								'lstm_train_data_lock':lstm_train_data_lock,
-								'lstm_weights_lock':lstm_weights_lock,
-								'relearn_interval_days':relearn_interval_days,
+								'relearn_interval_kwargs':relearn_interval_kwargs,
 								'env_data_available':env_data_available,
 								'env_train_data_lock':env_train_data_lock,
 								'agg' : agg,
@@ -167,5 +179,7 @@ if __name__ == "__main__":
 	ctrl_learn_th.join()
 	model_learn_th.join()
 	data_gen_th.join()
+	deploy_ctrl_th.join()
+
 	print("End of program execution")
 

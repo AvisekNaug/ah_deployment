@@ -39,6 +39,7 @@ def deploy_control(*args, **kwargs):
 	# check variables if needed
 	obs_space_vars : list = kwargs['obs_space_vars']
 	scaler : a_utils.dataframescaler = kwargs['scaler']
+	relearn_interval_kwargs = kwargs['relearn_interval_kwargs']
 	stpt_delta = np.array([0.0]) # in delta F
 	stpt_unscaled = np.array([68])  # in F
 	stpt_scaled = scaler.minmax_scale(stpt_unscaled, ['sat'], ['sat'])
@@ -49,13 +50,14 @@ def deploy_control(*args, **kwargs):
 		with agent_weights_lock:
 			rl_agent = PPO2.load(kwargs['best_rl_agent_path'])
 		agent_weights_available.clear()
+		print("Agent weights updated")
 	else:
 		raise FileNotFoundError
 
 	while True:
 	
 		# get current scaled and uncsaled observation
-		df, df_unscaled = get_real_obs(api_args, meta_data_,obs_space_vars)
+		df, df_unscaled = get_real_obs(api_args, meta_data_,obs_space_vars, scaler)
 		curr_obs_scaled = df.to_numpy().flatten()
 		curr_obs_unscaled = df_unscaled.to_numpy().flatten()
 
@@ -78,10 +80,14 @@ def deploy_control(*args, **kwargs):
 			with agent_weights_lock:
 				rl_agent = PPO2.load(kwargs['best_rl_agent_path'])
 			agent_weights_available.clear()
+			print("Agent weights updated")
 
 		# predict new delta and add it to new temp var for next loop check
 		stpt_delta = rl_agent.predict(curr_obs_scaled)
 		stpt_unscaled[0] = stpt_unscaled[0] + stpt_delta[0]
+		# clip it in case it crosses a range
+		stpt_unscaled = np.clip(stpt_unscaled, np.array([65]), np.array([72]))
+		# scale it
 		stpt_scaled = scaler.minmax_scale(stpt_unscaled, ['sat'], ['sat'])
 
 		# write it to a file for BdX
@@ -98,13 +104,13 @@ def deploy_control(*args, **kwargs):
 		cfile.close()
 
 		# sleep for 30 mins before next output
-		time.sleep(timedelta(minutes=30).seconds)
+		time.sleep(timedelta(**relearn_interval_kwargs).seconds)
 
 	raise NotImplementedError
 
 
 
-def get_real_obs(api_args: dict, meta_data_: dict, obs_space_vars : list):
+def get_real_obs(api_args: dict, meta_data_: dict, obs_space_vars : list, scaler):
 
 	# arguements for the api query
 	time_args = {'trend_id' : '2681', 'save_path' : 'data/trend_data/alumni_data_deployment.csv'}
@@ -166,7 +172,6 @@ def get_real_obs(api_args: dict, meta_data_: dict, obs_space_vars : list):
 	df_unscaled = df_cleaned.copy()
 
 	# scale the columns: here we will use min-max
-	scaler = a_utils.dataframescaler(meta_data_['column_stats_half_hour'])
 	df_cleaned[df_cleaned.columns] = scaler.minmax_scale(df_cleaned, df_cleaned.columns, df_cleaned.columns)
 
 	# create avg_stpt column
