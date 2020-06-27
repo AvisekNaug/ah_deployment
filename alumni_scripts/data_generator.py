@@ -120,7 +120,7 @@ def data_gen_process_cwe(*args, **kwargs):
 
 	# smooth the data
 	#df = a_utils.dfsmoothing(df=df, column_names=list(df.columns))
-	df.clip(lower=0) # Remove <0 values for all columns as a result of smoothing
+	df.clip(lower=0, inplace=True) # Remove <0 values for all columns as a result of smoothing
 	
 
 	# aggregate data
@@ -186,7 +186,7 @@ def data_gen_process_hwe(*args, **kwargs):
 
 	# smooth the data
 	# df = a_utils.dfsmoothing(df=df, column_names=list(df.columns))
-	df.clip(lower=0) # Remove <0 values for all columns as a result of smoothing
+	df.clip(lower=0, inplace=True) # Remove <0 values for all columns as a result of smoothing
 	
 
 	# aggregate data
@@ -255,7 +255,7 @@ def data_gen_process_vlv(*args, **kwargs):
 
 	# smooth the data
 	# df = a_utils.dfsmoothing(df=df, column_names=list(df.columns))
-	df.clip(lower=0) # Remove <0 values for all columns as a result of smoothing
+	df.clip(lower=0, inplace=True) # Remove <0 values for all columns as a result of smoothing
 	
 
 	# aggregate data
@@ -323,7 +323,7 @@ def data_gen_process_env(*args, **kwargs):
 
 	# smooth the data
 	# df = a_utils.dfsmoothing(df=df, column_names=list(df.columns))
-	df.clip(lower=0) # Remove <0 values for all columns as a result of smoothing
+	df.clip(lower=0, inplace=True) # Remove <0 values for all columns as a result of smoothing
 	
 
 	# aggregate data
