@@ -107,15 +107,15 @@ class Env(gym.Env):
 
 		test_start = df.index[-1]-timedelta(days=7)
 		test_end = df.index[-1]
-		df_t = df.loc[test_start:test_end,:]
-		self.train_data_limit = self.nrows - df_t.shape[0]
+		self.df_t = df.loc[test_start:test_end,:]
+		self.train_data_limit = self.nrows - self.df_t.shape[0]
 
 		#self.slicepoint = slicepoint
 		#self.train_data_limit = int(self.slicepoint * self.nrows)
 
 		self.test_data_limit = self.nrows
 		# episode_length: dictates number of steps in an episode
-		self.episode_length = 1544  # self.train_data_limit 20
+		self.episode_length = self.train_data_limit
 		# Used to store the old historical action for comparison
 		self.hist_a = None
 		# Information about the reward params
@@ -321,11 +321,13 @@ class Env(gym.Env):
 	def testenv(self,):
 		self.testing = True
 		self.dataptr = self.train_data_limit
+		self.episode_length = self.df_t.shape[0]
 
 
 	def trainenv(self,):
 		self.testing = False
 		self.dataptr = 0
+		self.episode_length = self.train_data_limit
 
 	def cache_hist_action(self,):
 
