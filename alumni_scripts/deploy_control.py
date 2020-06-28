@@ -29,7 +29,7 @@ def deploy_control(*args, **kwargs):
 	with open('alumni_scripts/meta_data.json', 'r') as fp:
 		meta_data_ = json.load(fp)
 	with open('experience.csv', 'a+') as cfile:
-		cfile.write('{}, {}, {}, {}, {}, {} {}\n'.format('time', 'oat', 'oah', 'wbt',
+		cfile.write('{}, {}, {}, {}, {}, {}, {}\n'.format('time', 'oat', 'oah', 'wbt',
 		 'avg_stpt', 'sat', 'rlstpt'))
 	cfile.close()
 
@@ -57,7 +57,7 @@ def deploy_control(*args, **kwargs):
 	while True:
 	
 		# get current scaled and uncsaled observation
-		df, df_unscaled = get_real_obs(api_args, meta_data_,obs_space_vars, scaler)
+		df, df_unscaled = get_real_obs(api_args, meta_data_, obs_space_vars, scaler)
 		curr_obs_scaled = df.to_numpy().flatten()
 		curr_obs_unscaled = df_unscaled.to_numpy().flatten()
 
@@ -91,15 +91,15 @@ def deploy_control(*args, **kwargs):
 		stpt_scaled = scaler.minmax_scale(stpt_unscaled, ['sat'], ['sat'])
 
 		# write it to a file for BdX
-		with open('reheat_preheat_setpoint.txt', 'w') as cfile:
+		with open('reheat_preheat_setpoint.txt', 'a+') as cfile:
 			cfile.seek(0)
-			cfile.write(float(stpt_unscaled[0]))
+			cfile.write('{}\n'.format(str(stpt_unscaled[0])))
 		cfile.close()
 
 		# write output to file for our use
 		fout = np.concatenate((curr_obs_unscaled, stpt_unscaled))
 		with open('experience.csv', 'a+') as cfile:
-			cfile.write('{}, {:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f} {:.3f}\n'.format(datetime.now(), fout[0],
+			cfile.write('{}, {:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f}\n'.format(datetime.now(), fout[0],
 			 fout[1], fout[2], fout[3], fout[4], fout[5]))
 		cfile.close()
 
@@ -142,16 +142,16 @@ def get_real_obs(api_args: dict, meta_data_: dict, obs_space_vars : list, scaler
 	t_f = 9*(T-273.15)/5 + 32
 	df_['wbt'] = t_f
 
+	# rename the columns
+	new_names = []
+	for i in df_.columns:
+		new_names.append(meta_data_["reverse_col_alias"][i])
+	df_.columns = new_names
+
 	# clean the data
 	df_cleaned = dp.online_data_clean(
 		meta_data_ = meta_data_, df = df_
 	)
-
-	# rename the columns
-	new_names = []
-	for i in df_cleaned.columns:
-		new_names.append(meta_data_["reverse_col_alias"][i])
-	df_cleaned.columns = new_names
 
 	# clip less than 0 values
 	df_cleaned.clip(lower=0, inplace=True)

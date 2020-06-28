@@ -125,7 +125,7 @@ def controller_learn(*args, **kwargs):
 			best_rl_agent_path = kwargs['env_config']['model_path'] + 'best_rl_agent'
 			with agent_weights_lock:
 				test_perf_log = ppo_agent.test_agent(best_rl_agent_path, env, num_episodes=1)
-			#agent_weights_available.set()  # agent weights are available for deployment thread
+			agent_weights_available.set()  # agent weights are available for deployment thread
 			# save the performance data
 			rl_perf_save(test_perf_log_list=test_perf_log, log_dir=kwargs['rl_perf_data'],
 							 save_as= 'csv', header=writeheader)

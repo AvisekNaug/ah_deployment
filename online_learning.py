@@ -29,11 +29,11 @@ if __name__ == "__main__":
 	exp_params = {}
 
 	# how to set prediction sections
-	relearn_interval_kwargs = {'days':0, 'hours':0, 'minutes':15, 'seconds':0}
+	relearn_interval_kwargs = {'days':0, 'hours':0, 'minutes':1, 'seconds':0}
 	# number of epochs to train dynamic models
-	epochs = 100
+	epochs = 1000
 	# num of steps to learn rl in each train method
-	rl_train_steps = 5000
+	rl_train_steps = 4500
 	# time stamp of the last time point in the test data
 	time_stamp = datetime(year = 2018, month = 11, day = 7, hour=0, minute=0, second=0)
 

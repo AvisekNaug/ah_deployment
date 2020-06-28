@@ -594,7 +594,7 @@ def df2operating_regions(df, column_names, thresholds):
     # org_shape = df.shape[0]
     
     # select cells to be retained
-    constraints = df.swifter.apply(
+    constraints = df.apply(
         lambda row: all([(cell > thresholds) for cell in row[column_names]]),
         axis=1)
     # Drop values set to be rejected
