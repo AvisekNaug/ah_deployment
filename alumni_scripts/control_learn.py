@@ -33,7 +33,7 @@ def controller_learn(*args, **kwargs):
 		lstm_weights_lock : Lock = kwargs['lstm_weights_lock']  # prevent data read/write access
 		agent_weights_lock : Lock = kwargs['agent_weights_lock']  # prevent data read/write access
 		# check variables
-		interval = 1
+		interval = kwargs['interval']
 		env_created = False
 		agent_created = False
 		writeheader = True
