@@ -10,6 +10,23 @@ from multiprocessing import Event, Lock
 from threading import Thread
 from datetime import datetime
 import json
+
+# ------------From Ibrahim's controller.py script
+import sys
+import logging
+# Set up logging with a global variable "log"
+logging.captureWarnings(True)
+log = logging.getLogger(__name__)
+_formatter = logging.Formatter('%(asctime)s - %(levelname)s: %(message)s',
+                              datefmt='%Y-%m-%d %H:%M:%S')
+_handler = logging.StreamHandler(sys.stderr)
+# Initially, before the code in __main__ guard executes, logging is set to DEBUG
+# to print out all messages to console.
+_handler.setLevel(logging.DEBUG)
+_handler.setFormatter(_formatter)
+log.addHandler(_handler)
+# ------------From Ibrahim's controller.py script
+
 import warnings
 with warnings.catch_warnings():
 	from alumni_scripts import data_generator as datagen
@@ -19,148 +36,169 @@ with warnings.catch_warnings():
 	from source import utils
 
 if __name__ == "__main__":
+
+	try:
+		
+		# ------------From Ibrahim's controller.py script
+		# Specifing the log file name
+		_logfile_handler = logging.FileHandler(filename='log.txt')
+		_logfile_handler.setLevel(logging.DEBUG)    # DEBUG is the lowest severity. It means print all messages.
+		_logfile_handler.setFormatter(_formatter)   # Set up the format of log messages
+		log.addHandler(_logfile_handler)            # add this handler to the logger
+		# set up logging severity
+		log.setLevel(logging.INFO)
+		# ------------From Ibrahim's controller.py script
+
 	
-	exp_params = {}
+		exp_params = {}
+		# how to set prediction sections
+		relearn_interval_kwargs = {'days':7, 'hours':0, 'minutes':0, 'seconds':0}
+		# weeks to look back into for retraining
+		retrain_range_weeks = 13
+		# number of epochs to train dynamic models
+		epochs = 100
+		# num of steps to learn rl in each train method
+		rl_train_steps = 6000
+		# time stamp of the last time point in the 1 week test data; used to get tsdb data call
+		time_stamp = datetime(year = 2018, month = 11, day = 7, hour=0, minute=0, second=0)
 
-	# how to set prediction sections
-	relearn_interval_kwargs = {'days':7, 'hours':0, 'minutes':0, 'seconds':0}
-	# weeks to look back into for retraining
-	retrain_range_weeks = 13
-	# number of epochs to train dynamic models
-	epochs = 100
-	# num of steps to learn rl in each train method
-	rl_train_steps = 6000
-	# time stamp of the last time point in the 1 week test data; used to get tsdb data call
-	time_stamp = datetime(year = 2018, month = 11, day = 7, hour=0, minute=0, second=0)
+		save_path = 'tmp/'
+		model_path = 'models/'
+		log_path = 'logs/'
+		results = 'results/'
+		trend_data = 'data/trend_data/'
+		cwe_data = save_path + 'cwe_data/'
+		hwe_data = save_path + 'hwe_data/'
+		vlv_data = save_path + 'vlv_data/'
+		env_data = save_path + 'env_data/'
+		rl_perf_data = save_path + 'rl_perf_data/'
+		online_mode = False
 
-	save_path = 'tmp/'
-	model_path = 'models/'
-	log_path = 'logs/'
-	results = 'results/'
-	trend_data = 'data/trend_data/'
-	cwe_data = save_path + 'cwe_data/'
-	hwe_data = save_path + 'hwe_data/'
-	vlv_data = save_path + 'vlv_data/'
-	env_data = save_path + 'env_data/'
-	rl_perf_data = save_path + 'rl_perf_data/'
-	online_mode = False
+		utils.make_dirs(cwe_data)
+		utils.make_dirs(hwe_data)
+		utils.make_dirs(vlv_data)
+		utils.make_dirs(env_data)
+		utils.make_dirs(model_path)
+		utils.make_dirs(log_path)
+		utils.make_dirs(results)
+		utils.make_dirs(rl_perf_data)
+		utils.make_dirs(trend_data)
 
-	utils.make_dirs(cwe_data)
-	utils.make_dirs(hwe_data)
-	utils.make_dirs(vlv_data)
-	utils.make_dirs(env_data)
-	utils.make_dirs(model_path)
-	utils.make_dirs(log_path)
-	utils.make_dirs(results)
-	utils.make_dirs(rl_perf_data)
-	utils.make_dirs(trend_data)
+		exp_params['cwe_model_config'] = {
+			'model_type': 'regresion', 'train_batchsize' : 32,
+			'input_timesteps': 1, 'input_dim': 4, 'timegap': 6,
+			'dense_layers' : 4, 'dense_units': 8, 'activation_dense' : 'relu',
+			'lstm_layers' : 4, 'lstm_units': 8, 'activation_lstm' : 'relu',
+			'save_path': cwe_data, 'model_path': model_path, 'name': 'cwe', 'epochs' : epochs
+		}
+		cwe_vars = ['pchw_flow', 'oah', 'wbt',  'sat', 'oat', 'cwe']
 
-	exp_params['cwe_model_config'] = {
-		'model_type': 'regresion', 'train_batchsize' : 32,
-		'input_timesteps': 1, 'input_dim': 4, 'timegap': 6,
-		'dense_layers' : 4, 'dense_units': 8, 'activation_dense' : 'relu',
-		'lstm_layers' : 4, 'lstm_units': 8, 'activation_lstm' : 'relu',
-		'save_path': cwe_data, 'model_path': model_path, 'name': 'cwe', 'epochs' : epochs
-	}
-	cwe_vars = ['pchw_flow', 'oah', 'wbt',  'sat', 'oat', 'cwe']
+		exp_params['hwe_model_config'] = {
+			'model_type': 'regresion', 'train_batchsize' : 32,
+			'input_timesteps': 1, 'input_dim': 4, 'timegap': 6,
+			'dense_layers' : 4, 'dense_units': 8, 'activation_dense' : 'relu',
+			'lstm_layers' : 4, 'lstm_units': 8, 'activation_lstm' : 'relu',
+			'save_path': hwe_data, 'model_path': model_path, 'name': 'hwe', 'epochs' : epochs
+		}
+		hwe_vars = ['oat', 'oah', 'wbt', 'sat', 'hwe']
+		
+		exp_params['vlv_model_config'] = {
+			'model_type': 'classification', 'train_batchsize' : 32,
+			'input_timesteps': 1, 'input_dim': 4, 'timegap': 6,
+			'dense_layers' : 4, 'dense_units': 8, 'activation_dense' : 'relu',
+			'lstm_layers' : 4, 'lstm_units': 8, 'activation_lstm' : 'relu',
+			'save_path': vlv_data, 'model_path': model_path, 'name': 'vlv', 'epochs' : epochs
+		}
+		vlv_vars = ['oat', 'oah', 'wbt', 'sat', 'hwe']
 
-	exp_params['hwe_model_config'] = {
-		'model_type': 'regresion', 'train_batchsize' : 32,
-		'input_timesteps': 1, 'input_dim': 4, 'timegap': 6,
-		'dense_layers' : 4, 'dense_units': 8, 'activation_dense' : 'relu',
-		'lstm_layers' : 4, 'lstm_units': 8, 'activation_lstm' : 'relu',
-		'save_path': hwe_data, 'model_path': model_path, 'name': 'hwe', 'epochs' : epochs
-	}
-	hwe_vars = ['oat', 'oah', 'wbt', 'sat', 'hwe']
-	
-	exp_params['vlv_model_config'] = {
-		'model_type': 'classification', 'train_batchsize' : 32,
-		'input_timesteps': 1, 'input_dim': 4, 'timegap': 6,
-		'dense_layers' : 4, 'dense_units': 8, 'activation_dense' : 'relu',
-		'lstm_layers' : 4, 'lstm_units': 8, 'activation_lstm' : 'relu',
-		'save_path': vlv_data, 'model_path': model_path, 'name': 'vlv', 'epochs' : epochs
-	}
-	vlv_vars = ['oat', 'oah', 'wbt', 'sat', 'hwe']
+		exp_params['env_config'] = {
+			'save_path' : env_data, 'model_path': model_path, 'logs' : log_path,
+			'obs_space_vars' : ['oat', 'oah', 'wbt', 'avg_stpt', 'sat'], 
+			'action_space_vars' :['sat'], 
+			'cwe_inputs' : ['sat-oat', 'oah', 'wbt', 'pchw_flow'],
+			'hwe_inputs' : ['oat', 'oah', 'wbt', 'sat-oat'],
+			'vlv_inputs' : ['oat', 'oah', 'wbt', 'sat-oat'],
+		}
 
-	exp_params['env_config'] = {
-		'save_path' : env_data, 'model_path': model_path, 'logs' : log_path,
-		'obs_space_vars' : ['oat', 'oah', 'wbt', 'avg_stpt', 'sat'], 
-		'action_space_vars' :['sat'], 
-		'cwe_inputs' : ['sat-oat', 'oah', 'wbt', 'pchw_flow'],
-		'hwe_inputs' : ['oat', 'oah', 'wbt', 'sat-oat'],
-		'vlv_inputs' : ['oat', 'oah', 'wbt', 'sat-oat'],
-	}
+		# Events
+		lstm_data_available = Event()  # new data available for lstm relearning
+		end_learning = Event()  # end the relearning procedure
+		env_data_available = Event()  # new data available for alumni env rl learning
+		lstm_weights_available = Event()  # trained lstm models are avilable
+		agent_model_available = Event()  # trained controller weights are availalbe for "online" deployment
+		agent_weights_available = Event()  # agent weights are available to be read by deploy loop
+		# Locks
+		lstm_train_data_lock = Lock()  # read / write lstm data without access issues
+		lstm_weights_lock = Lock()  # read / write lstm weights without access issues
+		env_train_data_lock = Lock()  # read / write env data without access issues
+		agent_weights_lock = Lock()  #  read / write rl weights without access issues
+		
+		# get agg type and data stats from meta_data.json
+		with open('alumni_scripts/meta_data.json', 'r') as fp:
+			meta_data_ = json.load(fp)
+		agg = meta_data_['column_agg_type']
+		scaler = a_utils.dataframescaler(meta_data_['column_stats_half_hour'])
 
-	# Events
-	lstm_data_available = Event()  # new data available for lstm relearning
-	end_learning = Event()  # end the relearning procedure
-	env_data_available = Event()  # new data available for alumni env rl learning
-	lstm_weights_available = Event()  # trained lstm models are avilable
-	agent_model_available = Event()  # trained controller weights are availalbe for "online" deployment
-	agent_weights_available = Event()  # agent weights are available to be read by deploy loop
-	# Locks
-	lstm_train_data_lock = Lock()  # read / write lstm data without access issues
-	lstm_weights_lock = Lock()  # read / write lstm weights without access issues
-	env_train_data_lock = Lock()  # read / write env data without access issues
-	agent_weights_lock = Lock()  #  read / write rl weights without access issues
-	
-	# get agg type and data stats from meta_data.json
-	with open('alumni_scripts/meta_data.json', 'r') as fp:
-		meta_data_ = json.load(fp)
-	agg = meta_data_['column_agg_type']
-	scaler = a_utils.dataframescaler(meta_data_['column_stats_half_hour'])
+		data_gen_th = Thread(target=datagen.offline_data_gen, daemon = False,
+							kwargs={'time_stamp':time_stamp,
+									'lstm_data_available':lstm_data_available,
+									'end_learning':end_learning,
+									'lstm_train_data_lock':lstm_train_data_lock,
+									'lstm_weights_lock':lstm_weights_lock,
+									'relearn_interval_kwargs':relearn_interval_kwargs,
+									'retrain_range_weeks':retrain_range_weeks,
+									'env_data_available':env_data_available,
+									'env_train_data_lock':env_train_data_lock,
+									'agg' : agg,
+									'scaler' : scaler,
+									'cwe_vars': cwe_vars,
+									'hwe_vars': hwe_vars,
+									'vlv_vars': vlv_vars,
+									'database':'bdx_batch_db',
+									'measurement':'alumni_data_v2',
+									'save_path': save_path,
+									'logger':log})
+		data_gen_th.start()
 
-	data_gen_th = Thread(target=datagen.offline_data_gen, daemon = False,
-						kwargs={'time_stamp':time_stamp,
-								'lstm_data_available':lstm_data_available,
+		model_learn_th = Thread(target=mdlearn.data_driven_model_learn, daemon = False,
+							kwargs={'lstm_data_available':lstm_data_available,
+									'end_learning':end_learning,
+									'lstm_train_data_lock':lstm_train_data_lock,
+									'lstm_weights_lock':lstm_weights_lock,
+									'lstm_weights_available':lstm_weights_available,
+									'cwe_model_config':exp_params['cwe_model_config'],
+									'hwe_model_config':exp_params['hwe_model_config'],
+									'vlv_model_config':exp_params['vlv_model_config'],
+									'save_path': save_path,
+									'logger':log})
+		model_learn_th.start()
+
+		ctrl_learn_th = Thread(target=ctlearn.controller_learn, daemon = False,
+							kwargs={
+								'env_config':exp_params['env_config'],
+								'env_data_available' : env_data_available,
+								'lstm_weights_available' : lstm_weights_available,
+								'agent_weights_available' : agent_weights_available,
 								'end_learning':end_learning,
-								'lstm_train_data_lock':lstm_train_data_lock,
-								'lstm_weights_lock':lstm_weights_lock,
-								'relearn_interval_kwargs':relearn_interval_kwargs,
-								'retrain_range_weeks':retrain_range_weeks,
-								'env_data_available':env_data_available,
-								'env_train_data_lock':env_train_data_lock,
-								'agg' : agg,
-								'scaler' : scaler,
-								'cwe_vars': cwe_vars,
-								'hwe_vars': hwe_vars,
-								'vlv_vars': vlv_vars,
-								'database':'bdx_batch_db',
-								'measurement':'alumni_data_v2',
-								'save_path': save_path})
-	data_gen_th.start()
+								'env_train_data_lock' : env_train_data_lock,
+								'lstm_weights_lock' : lstm_weights_lock,
+								'agent_weights_lock' : agent_weights_lock,
+								'rl_train_steps' : rl_train_steps,
+								'rl_perf_data' : rl_perf_data,
+								'online_mode' : online_mode,
+								'logger':log})
+		ctrl_learn_th.start()
 
-	model_learn_th = Thread(target=mdlearn.data_driven_model_learn, daemon = False,
-						kwargs={'lstm_data_available':lstm_data_available,
-								'end_learning':end_learning,
-								'lstm_train_data_lock':lstm_train_data_lock,
-								'lstm_weights_lock':lstm_weights_lock,
-								'lstm_weights_available':lstm_weights_available,
-								'cwe_model_config':exp_params['cwe_model_config'],
-								'hwe_model_config':exp_params['hwe_model_config'],
-								'vlv_model_config':exp_params['vlv_model_config'],
-								'save_path': save_path,
-								})
-	model_learn_th.start()
+		try:
+			log.info('All three threads started')
+			ctrl_learn_th.join()
+			model_learn_th.join()
+			data_gen_th.join()
+		except KeyboardInterrupt:
+			end_learning.set()
+			log.info('Safely exiting')
 
-	ctrl_learn_th = Thread(target=ctlearn.controller_learn, daemon = False,
-						kwargs={
-							'env_config':exp_params['env_config'],
-							'env_data_available' : env_data_available,
-							'lstm_weights_available' : lstm_weights_available,
-							'agent_weights_available' : agent_weights_available,
-							'end_learning':end_learning,
-							'env_train_data_lock' : env_train_data_lock,
-							'lstm_weights_lock' : lstm_weights_lock,
-							'agent_weights_lock' : agent_weights_lock,
-							'rl_train_steps' : rl_train_steps,
-							'rl_perf_data' : rl_perf_data,
-							'online_mode' : online_mode,
-						}
-
-	)
-	ctrl_learn_th.start()
-
-	ctrl_learn_th.join()
-	model_learn_th.join()
-	data_gen_th.join()
+	except Exception as e:
+		log.critical('Could not launch script:\n%s', str(e))
+		log.debug(e, exc_info=True)
+		exit(-1)

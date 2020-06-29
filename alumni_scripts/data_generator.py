@@ -29,87 +29,97 @@ sys.path.append(os.path.abspath(os.path.join('..')))
 
 def offline_data_gen(*args, **kwargs):
 
-	time_stamp = kwargs['time_stamp']
-	# year and week
-	year_num, week_num, _ = time_stamp.isocalendar()
+	# logger
+	log = kwargs['logger']
+	try:
+		time_stamp = kwargs['time_stamp']
+		# year and week
+		year_num, week_num, _ = time_stamp.isocalendar()
 
-	# Events
-	lstm_data_available : Event = kwargs['lstm_data_available']  # new data available for lstm relearning
-	env_data_available : Event = kwargs['env_data_available']  # new data available for env relearning  # pylint: disable=unused-variable
-	end_learning : Event = kwargs['end_learning'] 
+		# Events
+		lstm_data_available : Event = kwargs['lstm_data_available']  # new data available for lstm relearning
+		env_data_available : Event = kwargs['env_data_available']  # new data available for env relearning  # pylint: disable=unused-variable
+		end_learning : Event = kwargs['end_learning'] 
 
-	# Locks
-	lstm_train_data_lock : Lock = kwargs['lstm_train_data_lock']  # prevent dataloop from writing data
-	env_train_data_lock : Lock = kwargs['env_train_data_lock']  # prevent dataloop from writing data  # pylint: disable=unused-variable
+		# Locks
+		lstm_train_data_lock : Lock = kwargs['lstm_train_data_lock']  # prevent dataloop from writing data
+		env_train_data_lock : Lock = kwargs['env_train_data_lock']  # prevent dataloop from writing data  # pylint: disable=unused-variable
 
-	# relearn interval in date time format
-	relearn_interval_kwargs = kwargs['relearn_interval_kwargs']
-	# retrain range in weeks
-	retrain_range_weeks = kwargs['retrain_range_weeks']
+		# relearn interval in date time format
+		relearn_interval_kwargs = kwargs['relearn_interval_kwargs']
+		# retrain range in weeks
+		retrain_range_weeks = kwargs['retrain_range_weeks']
 
-	client = DataFrameClient(host='localhost', port=8086, database=kwargs['database'],)
-
-
-	while True:
-
-		"""relearning interval decider: here it is a condition; for online it will be time interval or error measure 
-		along side the already exisitng conditions"""
-		if not (lstm_data_available.is_set() | env_data_available.is_set()):  # or condition prevents faster overwrite for env data
+		client = DataFrameClient(host='localhost', port=8086, database=kwargs['database'],)
 
 
-			result_obj = client.query("select * from {} where time >= '{}' - {}w \
-								and time < '{}'".format(kwargs['measurement'], str(time_stamp), str(time_stamp),retrain_range_weeks))
-			df_env = result_obj[kwargs['measurement']]
-			df_env = df_env.drop(columns = ['data_cleaned', 'aggregated', 'time-interval'])
+		while not end_learning.is_set():
 
-			data_gen_process_cwe_th = Thread(target=data_gen_process_cwe, daemon=False,
-										kwargs={ 
-										'df' : result_obj[kwargs['measurement']].loc[:,kwargs['cwe_vars']],
-										'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
-										'week_num': week_num, 'save_path':kwargs['save_path'] 
-										})
-			data_gen_process_hwe_th = Thread(target=data_gen_process_hwe, daemon=False, 
-										kwargs={ 
-										'df' : result_obj[kwargs['measurement']].loc[:,kwargs['hwe_vars']],
-										'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
-										'week_num': week_num, 'save_path':kwargs['save_path'] 
-										})
-			data_gen_process_vlv_th = Thread(target=data_gen_process_vlv, daemon=False, 
-										kwargs={ 
-										'df' : result_obj[kwargs['measurement']].loc[:,kwargs['vlv_vars']],
-										'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
-										'week_num': week_num, 'save_path':kwargs['save_path'] 
-										})
-			data_gen_process_env_th = Thread(target=data_gen_process_env, daemon=False, 
-										kwargs={
-										'df' : df_env,
-										'agg': kwargs['agg'], 'scaler': kwargs['scaler'],
-										'save_path':kwargs['save_path']
-										})
+			"""relearning interval decider: here it is a condition; for online it will be time interval or error measure 
+			along side the already exisitng conditions"""
+			if not (lstm_data_available.is_set() | env_data_available.is_set()):  # or condition prevents faster overwrite for env data
+
+				log.info('OfflineDataGen: Getting Data from TSDB')
+
+				result_obj = client.query("select * from {} where time >= '{}' - {}w \
+									and time < '{}'".format(kwargs['measurement'], str(time_stamp), str(time_stamp),retrain_range_weeks))
+				df_env = result_obj[kwargs['measurement']]
+				df_env = df_env.drop(columns = ['data_cleaned', 'aggregated', 'time-interval'])
+
+				data_gen_process_cwe_th = Thread(target=data_gen_process_cwe, daemon=False,
+											kwargs={ 
+											'df' : result_obj[kwargs['measurement']].loc[:,kwargs['cwe_vars']],
+											'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
+											'week_num': week_num, 'save_path':kwargs['save_path'] 
+											})
+				data_gen_process_hwe_th = Thread(target=data_gen_process_hwe, daemon=False, 
+											kwargs={ 
+											'df' : result_obj[kwargs['measurement']].loc[:,kwargs['hwe_vars']],
+											'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
+											'week_num': week_num, 'save_path':kwargs['save_path'] 
+											})
+				data_gen_process_vlv_th = Thread(target=data_gen_process_vlv, daemon=False, 
+											kwargs={ 
+											'df' : result_obj[kwargs['measurement']].loc[:,kwargs['vlv_vars']],
+											'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
+											'week_num': week_num, 'save_path':kwargs['save_path'] 
+											})
+				data_gen_process_env_th = Thread(target=data_gen_process_env, daemon=False, 
+											kwargs={
+											'df' : df_env,
+											'agg': kwargs['agg'], 'scaler': kwargs['scaler'],
+											'save_path':kwargs['save_path']
+											})
 
 
-			with lstm_train_data_lock:
-				data_gen_process_cwe_th.start()
-				data_gen_process_hwe_th.start()
-				data_gen_process_vlv_th.start()
-				data_gen_process_cwe_th.join()
-				data_gen_process_vlv_th.join()
-				data_gen_process_hwe_th.join()
-			lstm_data_available.set()  # data is now available for lstm training
-		
-			with env_train_data_lock:	
-				data_gen_process_env_th.start()
-				data_gen_process_env_th.join()
-			env_data_available.set()  # data is now available for agent and env training
-		
-			time_stamp += timedelta(**relearn_interval_kwargs)
-			week_num += 1
-			week_num = week_num if week_num%53 != 0 else 1
-			year_num = year_num if week_num!= 1 else year_num+1
+				with lstm_train_data_lock:
+					data_gen_process_cwe_th.start()
+					data_gen_process_hwe_th.start()
+					data_gen_process_vlv_th.start()
+					data_gen_process_cwe_th.join()
+					data_gen_process_vlv_th.join()
+					data_gen_process_hwe_th.join()
+				lstm_data_available.set()  # data is now available for lstm training
+			
+				with env_train_data_lock:	
+					data_gen_process_env_th.start()
+					data_gen_process_env_th.join()
+				env_data_available.set()  # data is now available for agent and env training
 
-			if week_num == 47:  # can be other terminating condition like year==2020 & week=5 etc
-				end_learning.set()
-				break
+				log.info('OfflineDataGen: Dynamic Model and Gym Env data available')
+
+				time_stamp += timedelta(**relearn_interval_kwargs)
+				week_num += 1
+				week_num = week_num if week_num%53 != 0 else 1
+				year_num = year_num if week_num!= 1 else year_num+1
+
+				if week_num == 47:  # can be other terminating condition like year==2020 & week=5 etc
+					end_learning.set()
+					break
+	
+	except Exception as e:
+		log.error('Off-Line Data Generator Module: %s', str(e))
+		log.debug(e, exc_info=True)
 
 
 def data_gen_process_cwe(*args, **kwargs):
@@ -351,162 +361,175 @@ def online_data_gen(*args, **kwargs):
 	which is followed by model training
 	"""
 	
-	# Events
-	lstm_data_available : Event = kwargs['lstm_data_available']  # new data available for lstm relearning
-	env_data_available : Event = kwargs['env_data_available']  # new data available for env relearning  # pylint: disable=unused-variable
-	end_learning : Event = kwargs['end_learning'] 
+	# logger
+	log = kwargs['logger']
+	try: 
+		# Events
+		lstm_data_available : Event = kwargs['lstm_data_available']  # new data available for lstm relearning
+		env_data_available : Event = kwargs['env_data_available']  # new data available for env relearning  # pylint: disable=unused-variable
+		end_learning : Event = kwargs['end_learning'] 
 
-	# Locks
-	lstm_train_data_lock : Lock = kwargs['lstm_train_data_lock']  # prevent dataloop from writing data
-	env_train_data_lock : Lock = kwargs['env_train_data_lock']  # prevent dataloop from writing data  # pylint: disable=unused-variable
+		# Locks
+		lstm_train_data_lock : Lock = kwargs['lstm_train_data_lock']  # prevent dataloop from writing data
+		env_train_data_lock : Lock = kwargs['env_train_data_lock']  # prevent dataloop from writing data  # pylint: disable=unused-variable
 
-	# relearn interval in date time format
-	relearn_interval_kwargs = kwargs['relearn_interval_kwargs']  # eg {'days':6, 'hours':23, 'minutes':50, 'seconds':0}
-	# retrain range in weeks
-	retrain_range_weeks = kwargs['retrain_range_weeks']
+		# relearn interval in date time format
+		relearn_interval_kwargs = kwargs['relearn_interval_kwargs']  # eg {'days':6, 'hours':23, 'minutes':50, 'seconds':0}
+		# retrain range in weeks
+		retrain_range_weeks = kwargs['retrain_range_weeks']
 
-	# time at which this method started: used for book triggering relearn loop
-	last_train_time = datetime.now()
-	year_num, week_num, _ = last_train_time.isocalendar()
+		# time at which this method started: used for book triggering relearn loop
+		last_train_time = datetime.now()
+		year_num, week_num, _ = last_train_time.isocalendar()
 
-	#get auth api and meta data dictionary
-	with open('auths.json', 'r') as fp:
-		api_args = json.load(fp)
-	with open('alumni_scripts/meta_data.json', 'r') as fp:
-		meta_data_ = json.load(fp)
+		#get auth api and meta data dictionary
+		with open('auths.json', 'r') as fp:
+			api_args = json.load(fp)
+		with open('alumni_scripts/meta_data.json', 'r') as fp:
+			meta_data_ = json.load(fp)
 
-	while True:  # query data at regular intervals
+		while not end_learning.is_set():  # query data at regular intervals
 
-		# condition 1 : data availability -- set to True to be always satisifed
-		data_unavailable = not (lstm_data_available.is_set() | env_data_available.is_set())
-		# condition 2 : interval satisfied -- set to True to be always satisifed
-		interval_completed = (datetime.now()-last_train_time) > timedelta(**relearn_interval_kwargs)
-		# condition 3 : some error is crossing a threshold -- set to True to be always satisifed
-		error_trigger = True
-		# condition 4 : some reward measure is crossing a threshold -- set to True to be always satisifed
-		reward_trigger = True
+			# condition 1 : data availability -- set to True to be always satisifed
+			data_unavailable = not (lstm_data_available.is_set() | env_data_available.is_set())
+			# condition 2 : interval satisfied -- set to True to be always satisifed
+			interval_completed = (datetime.now()-last_train_time) > timedelta(**relearn_interval_kwargs)
+			# condition 3 : some error is crossing a threshold -- set to True to be always satisifed
+			error_trigger = True
+			# condition 4 : some reward measure is crossing a threshold -- set to True to be always satisifed
+			reward_trigger = True
 
-		if data_unavailable & interval_completed & error_trigger & reward_trigger:
+			if data_unavailable & interval_completed & error_trigger & reward_trigger:
 
-			# update last_train_time
-			last_train_time = datetime.now()
+				# update last_train_time
+				last_train_time = datetime.now()
 
-			# get the new data
-			df = get_train_data(api_args, meta_data_, retrain_range_weeks)
+				# get the new data
+				log.info('OnlineDataGen: Getting Data from BdX')
+				df = get_train_data(api_args, meta_data_, retrain_range_weeks, log)
 
-			# Thread for data preparation
-			data_gen_process_cwe_th = Thread(target=data_gen_process_cwe, daemon=False,
-										kwargs={ 
-										'df' : df.loc[:,kwargs['cwe_vars']],
-										'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
-										'week_num': week_num, 'save_path':kwargs['save_path'] 
-										})
-			data_gen_process_hwe_th = Thread(target=data_gen_process_hwe, daemon=False, 
-										kwargs={ 
-										'df' : df.loc[:,kwargs['hwe_vars']],
-										'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
-										'week_num': week_num, 'save_path':kwargs['save_path'] 
-										})
-			data_gen_process_vlv_th = Thread(target=data_gen_process_vlv, daemon=False, 
-										kwargs={ 
-										'df' : df.loc[:,kwargs['vlv_vars']],
-										'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
-										'week_num': week_num, 'save_path':kwargs['save_path'] 
-										})
-			data_gen_process_env_th = Thread(target=data_gen_process_env, daemon=False, 
-										kwargs={
-										'df' : df,
-										'agg': kwargs['agg'], 'scaler': kwargs['scaler'],
-										'save_path':kwargs['save_path']
-										})
-			with lstm_train_data_lock:
-				data_gen_process_cwe_th.start()
-				data_gen_process_hwe_th.start()
-				data_gen_process_vlv_th.start()
-				data_gen_process_cwe_th.join()
-				data_gen_process_vlv_th.join()
-				data_gen_process_hwe_th.join()
-			lstm_data_available.set()  # data is now available for lstm training
-		
-			with env_train_data_lock:	
-				data_gen_process_env_th.start()
-				data_gen_process_env_th.join()
-			env_data_available.set()  # data is now available for agent and env training
-
-			# with lstm_train_data_lock:
-			# 	data_gen_process_cwe(**{ 'df' : df.loc[:,kwargs['cwe_vars']],
-			# 							'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
-			# 							'week_num': week_num, 'save_path':kwargs['save_path']})
-			# 	data_gen_process_hwe(**{ 'df' : df.loc[:,kwargs['hwe_vars']],
-			# 							'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
-			# 							'week_num': week_num, 'save_path':kwargs['save_path']})
-			# 	data_gen_process_vlv(**{ 'df' : df.loc[:,kwargs['vlv_vars']],
-			# 							'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
-			# 							'week_num': week_num, 'save_path':kwargs['save_path']})
-			# lstm_data_available.set()
-			# with env_train_data_lock:
-			# 	data_gen_process_env(**{'df' : df,
-			# 							'agg': kwargs['agg'], 'scaler': kwargs['scaler'],
-			# 							'save_path':kwargs['save_path']})		
-			# env_data_available.set()
+				# Thread for data preparation
+				data_gen_process_cwe_th = Thread(target=data_gen_process_cwe, daemon=False,
+											kwargs={ 
+											'df' : df.loc[:,kwargs['cwe_vars']],
+											'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
+											'week_num': week_num, 'save_path':kwargs['save_path'] 
+											})
+				data_gen_process_hwe_th = Thread(target=data_gen_process_hwe, daemon=False, 
+											kwargs={ 
+											'df' : df.loc[:,kwargs['hwe_vars']],
+											'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
+											'week_num': week_num, 'save_path':kwargs['save_path'] 
+											})
+				data_gen_process_vlv_th = Thread(target=data_gen_process_vlv, daemon=False, 
+											kwargs={ 
+											'df' : df.loc[:,kwargs['vlv_vars']],
+											'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
+											'week_num': week_num, 'save_path':kwargs['save_path'] 
+											})
+				data_gen_process_env_th = Thread(target=data_gen_process_env, daemon=False, 
+											kwargs={
+											'df' : df,
+											'agg': kwargs['agg'], 'scaler': kwargs['scaler'],
+											'save_path':kwargs['save_path']
+											})
+				with lstm_train_data_lock:
+					data_gen_process_cwe_th.start()
+					data_gen_process_hwe_th.start()
+					data_gen_process_vlv_th.start()
+					data_gen_process_cwe_th.join()
+					data_gen_process_vlv_th.join()
+					data_gen_process_hwe_th.join()
+				lstm_data_available.set()  # data is now available for lstm training
 			
+				with env_train_data_lock:	
+					data_gen_process_env_th.start()
+					data_gen_process_env_th.join()
+				env_data_available.set()  # data is now available for agent and env training
+
+				log.info('OnlineDataGen: Dynamic Model and Gym Env data available')
+				# with lstm_train_data_lock:
+				# 	data_gen_process_cwe(**{ 'df' : df.loc[:,kwargs['cwe_vars']],
+				# 							'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
+				# 							'week_num': week_num, 'save_path':kwargs['save_path']})
+				# 	data_gen_process_hwe(**{ 'df' : df.loc[:,kwargs['hwe_vars']],
+				# 							'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
+				# 							'week_num': week_num, 'save_path':kwargs['save_path']})
+				# 	data_gen_process_vlv(**{ 'df' : df.loc[:,kwargs['vlv_vars']],
+				# 							'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
+				# 							'week_num': week_num, 'save_path':kwargs['save_path']})
+				# lstm_data_available.set()
+				# with env_train_data_lock:
+				# 	data_gen_process_env(**{'df' : df,
+				# 							'agg': kwargs['agg'], 'scaler': kwargs['scaler'],
+				# 							'save_path':kwargs['save_path']})		
+				# env_data_available.set()
+				
 
 
-			week_num += 1
-			week_num = week_num if week_num%53 != 0 else 1
-			year_num = year_num if week_num!= 1 else year_num+1
+				week_num += 1
+				week_num = week_num if week_num%53 != 0 else 1
+				year_num = year_num if week_num!= 1 else year_num+1
 
-		# else:	
-			# sleep for 5 minutes to prevent fast loops in case relearn interval is large and 
-			# other conditions have not been satisfied
-			# time.sleep(timedelta(minutes=1).seconds)
-
-		if end_learning.is_set():
-			break
+			# else:	
+				# sleep for 5 minutes to prevent fast loops in case relearn interval is large and 
+				# other conditions have not been satisfied
+				# time.sleep(timedelta(minutes=1).seconds)
+	except Exception as e:
+		log.error('On-Line Data Generator Module: %s', str(e))
+		log.debug(e, exc_info=True)
 	
 
-def get_train_data(api_args, meta_data_, retrain_range_weeks):
+def get_train_data(api_args, meta_data_, retrain_range_weeks, log):
 
-	# arguements for the api query
-	time_args = {'trend_id' : '2681', 'save_path' : 'data/trend_data/alumni_data_train.csv'}
-	start_fields = ['start_'+i for i in ['year','month','day', 'hour', 'minute', 'second']]
-	end_fields = ['end_'+i for i in ['year','month','day', 'hour', 'minute', 'second']]
-	end_time = datetime.now()
-	start_time = end_time - timedelta(weeks=retrain_range_weeks)
-	for idx, i in enumerate(start_fields):
-		time_args[i] = start_time.timetuple()[idx]
-	for idx, i in enumerate(end_fields):
-		time_args[i] = end_time.timetuple()[idx]
-	api_args.update(time_args)
+	try:
+		# arguements for the api query
+		time_args = {'trend_id' : '2681', 'save_path' : 'data/trend_data/alumni_data_train.csv'}
+		start_fields = ['start_'+i for i in ['year','month','day', 'hour', 'minute', 'second']]
+		end_fields = ['end_'+i for i in ['year','month','day', 'hour', 'minute', 'second']]
+		end_time = datetime.now()
+		start_time = end_time - timedelta(weeks=retrain_range_weeks)
+		for idx, i in enumerate(start_fields):
+			time_args[i] = start_time.timetuple()[idx]
+		for idx, i in enumerate(end_fields):
+			time_args[i] = end_time.timetuple()[idx]
+		api_args.update(time_args)
 
-	# pull the data into csv file
-	dp.pull_offline_data(**api_args)
+		# pull the data into csv file
+		dp.pull_offline_data(**api_args)
+		log.info('OnlineDataGen: Train Data Obtained from API')
 
-	# get the dataframe from a csv
-	df_ = read_csv('data/trend_data/alumni_data_train.csv', )
-	df_['time'] = to_datetime(df_['time'])
-	df_.set_index(keys='time',inplace=True, drop = True)
-	df_ = a_utils.dropNaNrows(df_)
+		# get the dataframe from a csv
+		df_ = read_csv('data/trend_data/alumni_data_train.csv', )
+		df_['time'] = to_datetime(df_['time'])
+		df_.set_index(keys='time',inplace=True, drop = True)
+		df_ = a_utils.dropNaNrows(df_)
 
-	# add wet bulb temperature to the data
-	rh = df_['WeatherDataProfile humidity']/100
-	rh = rh.to_numpy()
-	t_db = 5*(df_['AHU_1 outdoorAirTemp']-32)/9 + 273.15
-	t_db = t_db.to_numpy()
-	T = HAPropsSI('T_wb','R',rh,'T',t_db,'P',101325)
-	t_f = 9*(T-273.15)/5 + 32
-	df_['wbt'] = t_f
+		# add wet bulb temperature to the data
+		log.info('OnlineDataGen: Start of Wet Bulb Data Calculation')
+		rh = df_['WeatherDataProfile humidity']/100
+		rh = rh.to_numpy()
+		t_db = 5*(df_['AHU_1 outdoorAirTemp']-32)/9 + 273.15
+		t_db = t_db.to_numpy()
+		T = HAPropsSI('T_wb','R',rh,'T',t_db,'P',101325)
+		t_f = 9*(T-273.15)/5 + 32
+		df_['wbt'] = t_f
+		log.info('OnlineDataGen: Wet Bulb Data Calculated')
 
-	# rename the columns
-	new_names = []
-	for i in df_.columns:
-		new_names.append(meta_data_["reverse_col_alias"][i])
-	df_.columns = new_names
+		# rename the columns
+		new_names = []
+		for i in df_.columns:
+			new_names.append(meta_data_["reverse_col_alias"][i])
+		df_.columns = new_names
 
-	# clean the data
-	df_cleaned = dp.offline_batch_data_clean(
-		meta_data_ = meta_data_, df = df_
-	)
+		# clean the data
+		df_cleaned = dp.offline_batch_data_clean(
+			meta_data_ = meta_data_, df = df_
+		)
 
-	return df_cleaned
+		return df_cleaned
+	
+	except Exception as e:
+		log.error('Date Generator Get Online Train Data Module: %s', str(e))
+		log.debug(e, exc_info=True)
 	

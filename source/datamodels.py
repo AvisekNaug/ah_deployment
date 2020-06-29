@@ -11,7 +11,6 @@ from sklearn.metrics import roc_auc_score, classification_report, roc_auc_score
 
 import warnings
 with warnings.catch_warnings():
-
 	import tensorflow as tf
 	from keras import backend as K
 	from keras.models import Model
