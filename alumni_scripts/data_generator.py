@@ -497,7 +497,7 @@ def get_train_data(api_args, meta_data_, retrain_range_weeks, log):
 
 		# pull the data into csv file
 		dp.pull_offline_data(**api_args)
-		log.info('OnlineDataGen: Train Data Obtained from API')
+		log.info('OnlineDataGen: Train Data Obtained  using API')
 
 		# get the dataframe from a csv
 		df_ = read_csv('data/trend_data/alumni_data_train.csv', )
