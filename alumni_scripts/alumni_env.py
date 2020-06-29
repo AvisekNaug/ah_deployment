@@ -49,8 +49,8 @@ class Env(gym.Env):
 										dtype = np.float32)
 
 		# the observation space (it is assumed to be continuous)
-		spacelb = self.stats.loc['min', self.obs_space_vars].to_numpy().flatten()
-		spaceub = self.stats.loc['max', self.obs_space_vars].to_numpy().flatten()
+		spacelb = np.zeros(len(obs_space_vars)) # self.stats.loc['min', self.obs_space_vars].to_numpy().flatten()
+		spaceub = np.ones(len(obs_space_vars))# self.stats.loc['max', self.obs_space_vars].to_numpy().flatten()
 		self.observation_space = spaces.Box(low = spacelb, high = spaceub, dtype =  np.float32)
 
 		# other base environment requirements
