@@ -46,7 +46,7 @@ if __name__ == "__main__":
 		_logfile_handler.setFormatter(_formatter)   # Set up the format of log messages
 		log.addHandler(_logfile_handler)            # add this handler to the logger
 		# set up logging severity
-		log.setLevel(logging.INFO)
+		log.setLevel(logging.DEBUG)
 		# ------------From Ibrahim's controller.py script
 
 	
@@ -56,9 +56,9 @@ if __name__ == "__main__":
 		# weeks to look back into for retraining
 		retrain_range_weeks = 13
 		# number of epochs to train dynamic models
-		epochs = 100
+		epochs = 1000
 		# num of steps to learn rl in each train method
-		rl_train_steps = 6000
+		rl_train_steps = 8000
 		# time stamp of the last time point in the 1 week test data; used to get tsdb data call
 		time_stamp = datetime(year = 2018, month = 11, day = 7, hour=0, minute=0, second=0)
 

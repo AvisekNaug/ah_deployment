@@ -31,7 +31,7 @@ def data_driven_model_learn(*args, **kwargs):
 
 		# Read the processed data and learn the 3 models inside a conditional loop
 		while not end_learning.is_set():
-			log.info("Dynamic Model Learning Module: Model Training Starts")
+
 			if not models_created:  # create the 3 models needed for training
 
 				cwe_model = dm.nn_model(**kwargs['cwe_model_config'])
@@ -58,7 +58,7 @@ def data_driven_model_learn(*args, **kwargs):
 
 			# data is available and prev models have been read by env
 			if (lstm_data_available.is_set() & (not lstm_weights_available.is_set())): 
-
+				log.info("Dynamic Model Learning Module: Model Training Starts")
 				""" Read the train and eval data """
 				with lstm_train_data_lock:
 					X_train_cwe, y_train_cwe, X_val_cwe, y_val_cwe = np.load(kwargs['save_path']+'cwe_data/cwe_X_train.npy'),\

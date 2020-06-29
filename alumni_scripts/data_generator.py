@@ -22,7 +22,7 @@ from keras.utils import to_categorical
 from alumni_scripts import alumni_data_utils as a_utils
 from alumni_scripts import data_process as dp
 from CoolProp.HumidAirProp import HAPropsSI
-
+import logging
 sys.path.append(os.path.abspath(os.path.join('..')))
 
 
@@ -62,7 +62,7 @@ def offline_data_gen(*args, **kwargs):
 				log.info('OfflineDataGen: Getting Data from TSDB')
 
 				result_obj = client.query("select * from {} where time >= '{}' - {}w \
-									and time < '{}'".format(kwargs['measurement'], str(time_stamp), str(time_stamp),retrain_range_weeks))
+									and time < '{}'".format(kwargs['measurement'], str(time_stamp),retrain_range_weeks,str(time_stamp)))
 				df_env = result_obj[kwargs['measurement']]
 				df_env = df_env.drop(columns = ['data_cleaned', 'aggregated', 'time-interval'])
 
@@ -113,7 +113,7 @@ def offline_data_gen(*args, **kwargs):
 				week_num = week_num if week_num%53 != 0 else 1
 				year_num = year_num if week_num!= 1 else year_num+1
 
-				if week_num == 47:  # can be other terminating condition like year==2020 & week=5 etc
+				if week_num == 2:  # can be other terminating condition like year==2020 & week=5 etc
 					end_learning.set()
 					break
 	
