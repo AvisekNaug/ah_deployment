@@ -176,6 +176,14 @@ class nn_model(datadrivenmodel):
 						layer.kernel.initializer.run(session=K.get_session())
 				self.model.compile(loss=self.loss,optimizer='adam')
 
+	def load_weights(self, *args, **kwargs):
+		"""
+		Load weights from the given path
+		"""
+		with self.graph.as_default():  # pylint: disable=not-context-manager
+			with self.session.as_default():  # pylint: disable=not-context-manager
+				self.model.load_weights(self.model_path +self.name+'_best_model')
+				self.model.compile(loss=self.loss,optimizer='adam')
 
 def regression_evaluate(prediction: np.ndarray, target: np.ndarray, **kwargs):
 
