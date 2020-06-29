@@ -42,6 +42,10 @@ def offline_data_gen(*args, **kwargs):
 	lstm_train_data_lock : Lock = kwargs['lstm_train_data_lock']  # prevent dataloop from writing data
 	env_train_data_lock : Lock = kwargs['env_train_data_lock']  # prevent dataloop from writing data  # pylint: disable=unused-variable
 
+	# relearn interval in date time format
+	relearn_interval_kwargs = kwargs['relearn_interval_kwargs']
+	# retrain range in weeks
+	retrain_range_weeks = kwargs['retrain_range_weeks']
 
 	client = DataFrameClient(host='localhost', port=8086, database=kwargs['database'],)
 
@@ -53,8 +57,8 @@ def offline_data_gen(*args, **kwargs):
 		if not (lstm_data_available.is_set() | env_data_available.is_set()):  # or condition prevents faster overwrite for env data
 
 
-			result_obj = client.query("select * from {} where time >= '{}' - 13w \
-								and time < '{}'".format(kwargs['measurement'], str(time_stamp), str(time_stamp)))
+			result_obj = client.query("select * from {} where time >= '{}' - {}w \
+								and time < '{}'".format(kwargs['measurement'], str(time_stamp), str(time_stamp),retrain_range_weeks))
 			df_env = result_obj[kwargs['measurement']]
 			df_env = df_env.drop(columns = ['data_cleaned', 'aggregated', 'time-interval'])
 
@@ -86,23 +90,19 @@ def offline_data_gen(*args, **kwargs):
 
 			with lstm_train_data_lock:
 				data_gen_process_cwe_th.start()
+				data_gen_process_hwe_th.start()
 				data_gen_process_vlv_th.start()
 				data_gen_process_cwe_th.join()
 				data_gen_process_vlv_th.join()
-			
-			with env_train_data_lock:
-				
+				data_gen_process_hwe_th.join()
+			lstm_data_available.set()  # data is now available for lstm training
+		
+			with env_train_data_lock:	
 				data_gen_process_env_th.start()
 				data_gen_process_env_th.join()
-
-			with lstm_train_data_lock:
-				data_gen_process_hwe_th.start()
-				data_gen_process_hwe_th.join()
-			
-			lstm_data_available.set()  # data is now available for lstm training
 			env_data_available.set()  # data is now available for agent and env training
 		
-			time_stamp += timedelta(days=kwargs['relearn_interval_days'])
+			time_stamp += timedelta(**relearn_interval_kwargs)
 			week_num += 1
 			week_num = week_num if week_num%53 != 0 else 1
 			year_num = year_num if week_num!= 1 else year_num+1
@@ -114,17 +114,12 @@ def offline_data_gen(*args, **kwargs):
 
 def data_gen_process_cwe(*args, **kwargs):
 
-	print("Entering cwe gen loop")
-	
 	# read the data from the database
 	df = kwargs['df'].copy()
-
 
 	# smooth the data
 	#df = a_utils.dfsmoothing(df=df, column_names=list(df.columns))
 	df.clip(lower=0, inplace=True) # Remove <0 values for all columns as a result of smoothing
-	
-	print("Somewhere in the cwe steps 1 ")
 
 	# aggregate data
 	rolling_sum_target, rolling_mean_target = [], []
@@ -135,24 +130,18 @@ def data_gen_process_cwe(*args, **kwargs):
 	df[rolling_sum_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_sum_target)
 	df[rolling_mean_target] =  a_utils.window_mean(df, window_size=6, column_names=rolling_mean_target)
 	df = a_utils.dropNaNrows(df)
-	print("Somewhere in the cwe steps aggregation completed ")
 
 	# Sample the data at period intervals
 	df = a_utils.sample_timeseries_df(df, period=6)
-	print("Somewhere in the cwe steps sampling completed ")
-
 
 	# scale the columns: here we will use min-max
 	df[df.columns] = kwargs['scaler'].minmax_scale(df, df.columns, df.columns)
-	print("Somewhere in the cwe steps scaling completed ")
 
 	# creating sat-oat for the data
 	df['sat-oat'] = df['sat'] - df['oat']
-	print("Somewhere in the cwe steps sat-oat completed ")
 
 	# select non-zero operating regions
 	df = a_utils.df2operating_regions(df, ['cwe'], 0.0)
-	print("Somewhere in the cwe steps non-zero completed completed ")
 
 	# determine split point for last 1 week test data
 	t_train_end = df.index[-1] - timedelta(days=7)
@@ -165,8 +154,6 @@ def data_gen_process_cwe(*args, **kwargs):
 		scaling = False, scaler = None, scaleX = True, scaleY = True,
 		split=splitvalue, shuffle=False,
 		reshaping=True, input_timesteps=1, output_timesteps = 1,)
-	print("Somewhere in the cwe steps train data created completed completed ")
-
 
 	# save test ids for later plots
 	idx_end = -max(X_test.shape[1],y_test.shape[1])
@@ -184,7 +171,6 @@ def data_gen_process_cwe(*args, **kwargs):
 
 def data_gen_process_hwe(*args, **kwargs):
 	
-	print("Entering hwe gen loop")
 	# read the data from the database
 	df = kwargs['df'].copy()
 
@@ -192,7 +178,6 @@ def data_gen_process_hwe(*args, **kwargs):
 	# smooth the data
 	# df = a_utils.dfsmoothing(df=df, column_names=list(df.columns))
 	df.clip(lower=0, inplace=True) # Remove <0 values for all columns as a result of smoothing
-	print("Entering hwe clipping done")
 
 	# aggregate data
 	rolling_sum_target, rolling_mean_target = [], []
@@ -203,23 +188,18 @@ def data_gen_process_hwe(*args, **kwargs):
 	df[rolling_sum_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_sum_target)
 	df[rolling_mean_target] =  a_utils.window_mean(df, window_size=6, column_names=rolling_mean_target)
 	df = a_utils.dropNaNrows(df)
-	print("Entering hwe gen loop agg done")
 
 	# Sample the data at period intervals
 	df = a_utils.sample_timeseries_df(df, period=6)
-	print("Entering hwe gen loop sampling done")
 
 	# scale the columns: here we will use min-max
 	df[df.columns] = kwargs['scaler'].minmax_scale(df, df.columns, df.columns)
-	print("Entering hwe gen loop scaling done")
 
 	# creating sat-oat for the data
 	df['sat-oat'] = df['sat'] - df['oat']
-	print("Entering hwe gen loop sat-oat done")
 
 	# select non-zero operating regions
 	df = a_utils.df2operating_regions(df, ['hwe'], 0.0)
-	print("Entering hwe gen loop  npon zero done")
 
 	# determine split point for last 1 week test data
 	t_train_end = df.index[-1] - timedelta(days=7)
@@ -246,7 +226,6 @@ def data_gen_process_hwe(*args, **kwargs):
 	np.save(kwargs['save_path']+'hwe_data/hwe_X_val.npy', X_test)
 	np.save(kwargs['save_path']+'hwe_data/hwe_y_train.npy', y_train)
 	np.save(kwargs['save_path']+'hwe_data/hwe_y_val.npy', y_test)
-	print("Entering hwe gen loop all doen and completed done")
 	
 	# except Exception:
 	# 	import traceback
@@ -383,6 +362,8 @@ def online_data_gen(*args, **kwargs):
 
 	# relearn interval in date time format
 	relearn_interval_kwargs = kwargs['relearn_interval_kwargs']  # eg {'days':6, 'hours':23, 'minutes':50, 'seconds':0}
+	# retrain range in weeks
+	retrain_range_weeks = kwargs['retrain_range_weeks']
 
 	# time at which this method started: used for book triggering relearn loop
 	last_train_time = datetime.now()
@@ -407,70 +388,67 @@ def online_data_gen(*args, **kwargs):
 
 		if data_unavailable & interval_completed & error_trigger & reward_trigger:
 
-			print("*********Entering train data generation loop*********")
-
 			# update last_train_time
 			last_train_time = datetime.now()
 
 			# get the new data
-			df = get_train_data(api_args, meta_data_)
+			df = get_train_data(api_args, meta_data_, retrain_range_weeks)
 
-			# # Thread for data preparation
-			# data_gen_process_cwe_th = Thread(target=data_gen_process_cwe, daemon=False,
-			# 							kwargs={ 
-			# 							'df' : df.loc[:,kwargs['cwe_vars']],
-			# 							'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
-			# 							'week_num': week_num, 'save_path':kwargs['save_path'] 
-			# 							})
-			# data_gen_process_hwe_th = Thread(target=data_gen_process_hwe, daemon=False, 
-			# 							kwargs={ 
-			# 							'df' : df.loc[:,kwargs['hwe_vars']],
-			# 							'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
-			# 							'week_num': week_num, 'save_path':kwargs['save_path'] 
-			# 							})
-			# data_gen_process_vlv_th = Thread(target=data_gen_process_vlv, daemon=False, 
-			# 							kwargs={ 
-			# 							'df' : df.loc[:,kwargs['vlv_vars']],
-			# 							'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
-			# 							'week_num': week_num, 'save_path':kwargs['save_path'] 
-			# 							})
-			# data_gen_process_env_th = Thread(target=data_gen_process_env, daemon=False, 
-			# 							kwargs={
-			# 							'df' : df,
-			# 							'agg': kwargs['agg'], 'scaler': kwargs['scaler'],
-			# 							'save_path':kwargs['save_path']
-			# 							})
-			# with lstm_train_data_lock:
-			# 	data_gen_process_vlv_th.start()
-			# 	data_gen_process_vlv_th.join()
-			# with lstm_train_data_lock:
-			# 	data_gen_process_cwe_th.start()
-			# 	data_gen_process_cwe_th.join()
-			# with lstm_train_data_lock:
-			# 	data_gen_process_hwe_th.start()
-			# 	data_gen_process_hwe_th.join()
-			# lstm_data_available.set()  # data is now available for lstm training
-			
-			# with env_train_data_lock:
-			# 	data_gen_process_env_th.start()
-			# 	data_gen_process_env_th.join()
-			# env_data_available.set()  # data is now available for agent and env training
-			with lstm_train_data_lock:
-				data_gen_process_cwe(**{ 'df' : df.loc[:,kwargs['cwe_vars']],
+			# Thread for data preparation
+			data_gen_process_cwe_th = Thread(target=data_gen_process_cwe, daemon=False,
+										kwargs={ 
+										'df' : df.loc[:,kwargs['cwe_vars']],
 										'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
-										'week_num': week_num, 'save_path':kwargs['save_path']})
-				data_gen_process_hwe(**{ 'df' : df.loc[:,kwargs['hwe_vars']],
+										'week_num': week_num, 'save_path':kwargs['save_path'] 
+										})
+			data_gen_process_hwe_th = Thread(target=data_gen_process_hwe, daemon=False, 
+										kwargs={ 
+										'df' : df.loc[:,kwargs['hwe_vars']],
 										'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
-										'week_num': week_num, 'save_path':kwargs['save_path']})
-				data_gen_process_vlv(**{ 'df' : df.loc[:,kwargs['vlv_vars']],
+										'week_num': week_num, 'save_path':kwargs['save_path'] 
+										})
+			data_gen_process_vlv_th = Thread(target=data_gen_process_vlv, daemon=False, 
+										kwargs={ 
+										'df' : df.loc[:,kwargs['vlv_vars']],
 										'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
-										'week_num': week_num, 'save_path':kwargs['save_path']})
-			lstm_data_available.set()
-			with env_train_data_lock:
-				data_gen_process_env(**{'df' : df,
+										'week_num': week_num, 'save_path':kwargs['save_path'] 
+										})
+			data_gen_process_env_th = Thread(target=data_gen_process_env, daemon=False, 
+										kwargs={
+										'df' : df,
 										'agg': kwargs['agg'], 'scaler': kwargs['scaler'],
-										'save_path':kwargs['save_path']})		
-			env_data_available.set()
+										'save_path':kwargs['save_path']
+										})
+			with lstm_train_data_lock:
+				data_gen_process_cwe_th.start()
+				data_gen_process_hwe_th.start()
+				data_gen_process_vlv_th.start()
+				data_gen_process_cwe_th.join()
+				data_gen_process_vlv_th.join()
+				data_gen_process_hwe_th.join()
+			lstm_data_available.set()  # data is now available for lstm training
+		
+			with env_train_data_lock:	
+				data_gen_process_env_th.start()
+				data_gen_process_env_th.join()
+			env_data_available.set()  # data is now available for agent and env training
+
+			# with lstm_train_data_lock:
+			# 	data_gen_process_cwe(**{ 'df' : df.loc[:,kwargs['cwe_vars']],
+			# 							'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
+			# 							'week_num': week_num, 'save_path':kwargs['save_path']})
+			# 	data_gen_process_hwe(**{ 'df' : df.loc[:,kwargs['hwe_vars']],
+			# 							'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
+			# 							'week_num': week_num, 'save_path':kwargs['save_path']})
+			# 	data_gen_process_vlv(**{ 'df' : df.loc[:,kwargs['vlv_vars']],
+			# 							'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
+			# 							'week_num': week_num, 'save_path':kwargs['save_path']})
+			# lstm_data_available.set()
+			# with env_train_data_lock:
+			# 	data_gen_process_env(**{'df' : df,
+			# 							'agg': kwargs['agg'], 'scaler': kwargs['scaler'],
+			# 							'save_path':kwargs['save_path']})		
+			# env_data_available.set()
 			
 
 
@@ -487,14 +465,14 @@ def online_data_gen(*args, **kwargs):
 			break
 	
 
-def get_train_data(api_args, meta_data_):
+def get_train_data(api_args, meta_data_, retrain_range_weeks):
 
 	# arguements for the api query
 	time_args = {'trend_id' : '2681', 'save_path' : 'data/trend_data/alumni_data_train.csv'}
 	start_fields = ['start_'+i for i in ['year','month','day', 'hour', 'minute', 'second']]
 	end_fields = ['end_'+i for i in ['year','month','day', 'hour', 'minute', 'second']]
 	end_time = datetime.now()
-	start_time = end_time - timedelta(weeks=7)
+	start_time = end_time - timedelta(weeks=retrain_range_weeks)
 	for idx, i in enumerate(start_fields):
 		time_args[i] = start_time.timetuple()[idx]
 	for idx, i in enumerate(end_fields):
@@ -518,7 +496,6 @@ def get_train_data(api_args, meta_data_):
 	T = HAPropsSI('T_wb','R',rh,'T',t_db,'P',101325)
 	t_f = 9*(T-273.15)/5 + 32
 	df_['wbt'] = t_f
-	print("****wbt is added******")
 
 	# rename the columns
 	new_names = []
@@ -530,8 +507,6 @@ def get_train_data(api_args, meta_data_):
 	df_cleaned = dp.offline_batch_data_clean(
 		meta_data_ = meta_data_, df = df_
 	)
-
-	print("data is cleaned")
 
 	return df_cleaned
 	

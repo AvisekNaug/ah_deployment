@@ -35,14 +35,14 @@ def controller_learn(*args, **kwargs):
 	agent_created = False
 	writeheader = True
 	to_break = False
+	online_mode = kwargs['online_mode']
+	best_rl_agent_path = kwargs['env_config']['model_path'] + 'best_rl_agent'
 
 	while True:
 
 		# if data for alumni env and energy models are available, and agent_weights have not been updated
 		# after last read then run controller training --!! To ber set to clear for offline training
 		if ( env_data_available.is_set() & lstm_weights_available.is_set() & (not agent_weights_available.is_set()) ):
-
-			print("******Entering Control Learn Loop*******")
 
 			with env_train_data_lock:
 				df_scaled = read_pickle(kwargs['env_config']['save_path']+'env_data.pkl')
@@ -111,6 +111,9 @@ def controller_learn(*args, **kwargs):
 				agent = ppo_agent.get_agent(env=env, 
 											model_save_dir=kwargs['env_config']['model_path'],
 											monitor_log_dir = kwargs['env_config']['logs'])
+				if online_mode:
+					agent.load(best_rl_agent_path, env = env)
+					online_mode = False
 				agent_created = True
 			# ** agent uses "monitor_log_dir" to update agent by looking at rewards
 			
@@ -122,7 +125,6 @@ def controller_learn(*args, **kwargs):
 			"""test rl model"""
 			env.env_method('testenv')
 			# provide path to the current best rl agent weights and test it
-			best_rl_agent_path = kwargs['env_config']['model_path'] + 'best_rl_agent'
 			with agent_weights_lock:
 				test_perf_log = ppo_agent.test_agent(best_rl_agent_path, env, num_episodes=1)
 			agent_weights_available.set()  # agent weights are available for deployment thread
@@ -132,8 +134,6 @@ def controller_learn(*args, **kwargs):
 			writeheader = False  # don't write header after first iteration
 
 			interval += 1
-
-			print("******End Control Learn Loop 1 iteration*******")
 
 			# if no more learning is needed end this thread
 			if to_break:

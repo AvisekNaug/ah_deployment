@@ -439,7 +439,7 @@ def removeoutliers(df, columns: list, **kwargs):
 		# Drop values set to be rejected
 		df = df.drop(df.index[~constraints], axis = 0)
 
-	print("Retaining {}% of the data".format(100*df.shape[0]/org_shape))
+	#print("Retaining {}% of the data".format(100*df.shape[0]/org_shape))
 
 	return df
 

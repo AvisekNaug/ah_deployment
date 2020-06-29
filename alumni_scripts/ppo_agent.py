@@ -36,7 +36,7 @@ def get_agent(env,
 	agent = PPO2("MlpPolicy", 
 				env, 
 				policy_kwargs=policy_net_kwargs, 
-				verbose=1)
+				verbose=0)
 
 	agent.is_tb_set = False  # attribute for callback
 	agent.model_save_dir = model_save_dir  # load or save model here

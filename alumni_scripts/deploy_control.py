@@ -44,20 +44,20 @@ def deploy_control(*args, **kwargs):
 	stpt_unscaled = np.array([68])  # in F
 	stpt_scaled = scaler.minmax_scale(stpt_unscaled, ['sat'], ['sat'])
 	not_first_loop = False
+	period = kwargs['period']
 
 	# an initial trained model has to exist
 	if agent_weights_available.is_set():
 		with agent_weights_lock:
 			rl_agent = PPO2.load(kwargs['best_rl_agent_path'])
 		agent_weights_available.clear()
-		print("Agent weights updated")
 	else:
 		raise FileNotFoundError
 
 	while True:
 	
 		# get current scaled and uncsaled observation
-		df, df_unscaled = get_real_obs(api_args, meta_data_, obs_space_vars, scaler)
+		df, df_unscaled = get_real_obs(api_args, meta_data_, obs_space_vars, scaler, period)
 		curr_obs_scaled = df.to_numpy().flatten()
 		curr_obs_unscaled = df_unscaled.to_numpy().flatten()
 
@@ -80,7 +80,6 @@ def deploy_control(*args, **kwargs):
 			with agent_weights_lock:
 				rl_agent = PPO2.load(kwargs['best_rl_agent_path'])
 			agent_weights_available.clear()
-			print("Agent weights updated")
 
 		# predict new delta and add it to new temp var for next loop check
 		stpt_delta = rl_agent.predict(curr_obs_scaled)
@@ -110,14 +109,15 @@ def deploy_control(*args, **kwargs):
 
 
 
-def get_real_obs(api_args: dict, meta_data_: dict, obs_space_vars : list, scaler):
+def get_real_obs(api_args: dict, meta_data_: dict, obs_space_vars : list, scaler, period):
 
 	# arguements for the api query
 	time_args = {'trend_id' : '2681', 'save_path' : 'data/trend_data/alumni_data_deployment.csv'}
 	start_fields = ['start_'+i for i in ['year','month','day', 'hour', 'minute', 'second']]
 	end_fields = ['end_'+i for i in ['year','month','day', 'hour', 'minute', 'second']]
 	end_time = datetime.now()
-	start_time = end_time - timedelta(minutes=30)
+	time_gap_minutes = int(period*5)
+	start_time = end_time - timedelta(minutes=time_gap_minutes)
 	for idx, i in enumerate(start_fields):
 		time_args[i] = start_time.timetuple()[idx]
 	for idx, i in enumerate(end_fields):

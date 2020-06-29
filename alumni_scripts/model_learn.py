@@ -42,14 +42,18 @@ def data_driven_model_learn(*args, **kwargs):
 			vlv_model.design(**kwargs['vlv_model_config'])
 			vlv_model.compile()
 
-			models_created = True
+			# if models are available from previous offline training
+			if lstm_weights_available.is_set():
+				with lstm_weights_lock:
+					cwe_model.load_weights()
+					hwe_model.load_weights()
+					vlv_model.load_weights()
+				lstm_weights_available.clear()
 
-			print("****Models Created****")
+			models_created = True
 
 		# data is available and prev models have been read by env
 		if (lstm_data_available.is_set() & (not lstm_weights_available.is_set())): 
-
-			print("******Entering Model Learn Loop*******") 
 
 			""" Read the train and eval data """
 			with lstm_train_data_lock:
@@ -87,8 +91,6 @@ def data_driven_model_learn(*args, **kwargs):
 				th_vlv_learn.join()
 				# weights are available
 				lstm_weights_available.set()
-
-			print("******End Model Learn stage Iteration 1*******") 
 
 			"""Prediction"""
 			# predict on test data cwe
