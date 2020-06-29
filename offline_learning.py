@@ -6,20 +6,15 @@ is now being created to formalize the main components needed in creating the rel
 import os
 # Enable '0' or disable '' GPU use
 os.environ['CUDA_VISIBLE_DEVICES'] = ''
-
 from multiprocessing import Event, Lock
 from threading import Thread
-
 from datetime import datetime
 import json
-
 import warnings
 with warnings.catch_warnings():
-
 	from alumni_scripts import data_generator as datagen
 	from alumni_scripts import model_learn as mdlearn
 	from alumni_scripts import control_learn as ctlearn
-
 	from alumni_scripts import alumni_data_utils as a_utils
 	from source import utils
 
@@ -28,12 +23,14 @@ if __name__ == "__main__":
 	exp_params = {}
 
 	# how to set prediction sections
-	relearn_interval_days = 7
+	relearn_interval_kwargs = {'days':7, 'hours':0, 'minutes':0, 'seconds':0}
+	# weeks to look back into for retraining
+	retrain_range_weeks = 13
 	# number of epochs to train dynamic models
 	epochs = 100
 	# num of steps to learn rl in each train method
 	rl_train_steps = 6000
-	# time stamp of the last time point in the test data
+	# time stamp of the last time point in the 1 week test data; used to get tsdb data call
 	time_stamp = datetime(year = 2018, month = 11, day = 7, hour=0, minute=0, second=0)
 
 	save_path = 'tmp/'
@@ -46,6 +43,7 @@ if __name__ == "__main__":
 	vlv_data = save_path + 'vlv_data/'
 	env_data = save_path + 'env_data/'
 	rl_perf_data = save_path + 'rl_perf_data/'
+	online_mode = False
 
 	utils.make_dirs(cwe_data)
 	utils.make_dirs(hwe_data)
@@ -118,7 +116,8 @@ if __name__ == "__main__":
 								'end_learning':end_learning,
 								'lstm_train_data_lock':lstm_train_data_lock,
 								'lstm_weights_lock':lstm_weights_lock,
-								'relearn_interval_days':relearn_interval_days,
+								'relearn_interval_kwargs':relearn_interval_kwargs,
+								'retrain_range_weeks':retrain_range_weeks,
 								'env_data_available':env_data_available,
 								'env_train_data_lock':env_train_data_lock,
 								'agg' : agg,
@@ -156,6 +155,7 @@ if __name__ == "__main__":
 							'agent_weights_lock' : agent_weights_lock,
 							'rl_train_steps' : rl_train_steps,
 							'rl_perf_data' : rl_perf_data,
+							'online_mode' : online_mode,
 						}
 
 	)
@@ -164,5 +164,3 @@ if __name__ == "__main__":
 	ctrl_learn_th.join()
 	model_learn_th.join()
 	data_gen_th.join()
-	print("End of program execution")
-

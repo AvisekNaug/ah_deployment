@@ -6,36 +6,32 @@ is now being created to formalize the main components needed in creating the rel
 import os
 # Enable '0' or disable '' GPU use
 os.environ['CUDA_VISIBLE_DEVICES'] = ''
-
 from multiprocessing import Event, Lock
 from threading import Thread
-
 from datetime import datetime
 import json
-
 import warnings
 with warnings.catch_warnings():
-
 	from alumni_scripts import data_generator as datagen
 	from alumni_scripts import model_learn as mdlearn
 	from alumni_scripts import control_learn as ctlearn
 	from alumni_scripts import deploy_control as dctrl
-
 	from alumni_scripts import alumni_data_utils as a_utils
 	from source import utils
 
 if __name__ == "__main__":
 	
 	exp_params = {}
-
 	# how to set prediction sections
 	relearn_interval_kwargs = {'days':0, 'hours':0, 'minutes':1, 'seconds':0}
+	# weeks to look back into for retraining
+	retrain_range_weeks = 13
 	# number of epochs to train dynamic models
 	epochs = 1000
 	# num of steps to learn rl in each train method
 	rl_train_steps = 4500
-	# time stamp of the last time point in the test data
-	time_stamp = datetime(year = 2018, month = 11, day = 7, hour=0, minute=0, second=0)
+	# period of data
+	period = 6 # 1 = 5 mins, 6 = 30 mins
 
 	save_path = 'tmp/'
 	model_path = 'models/'
@@ -47,6 +43,7 @@ if __name__ == "__main__":
 	vlv_data = save_path + 'vlv_data/'
 	env_data = save_path + 'env_data/'
 	rl_perf_data = save_path + 'rl_perf_data/'
+	online_mode = True
 
 	# path to saved agent weights
 	best_rl_agent_path = 'models/best_rl_agent'
@@ -103,6 +100,7 @@ if __name__ == "__main__":
 	env_data_available = Event()  # new data available for alumni env rl learning
 	lstm_weights_available = Event()  # trained lstm models are avilable
 	agent_model_available = Event()  # trained controller weights are availalbe for "online" deployment
+	lstm_weights_available.set()  # for online previous weights are available
 	agent_weights_available = Event()  # agent weights are available to be read by deploy loop
 	agent_weights_available.set() # set agent weights to available in online learning as it
 	# will be immediately deployed
@@ -125,7 +123,8 @@ if __name__ == "__main__":
 								'obs_space_vars' : exp_params['env_config']['obs_space_vars'],
 								'scaler' : scaler,
 								'best_rl_agent_path' : best_rl_agent_path,
-								'relearn_interval_kwargs' : relearn_interval_kwargs
+								'relearn_interval_kwargs' : relearn_interval_kwargs,
+								'period' : period
 						})
 	deploy_ctrl_th.start()
 
@@ -134,6 +133,7 @@ if __name__ == "__main__":
 								'end_learning':end_learning,
 								'lstm_train_data_lock':lstm_train_data_lock,
 								'relearn_interval_kwargs':relearn_interval_kwargs,
+								'retrain_range_weeks':retrain_range_weeks,
 								'env_data_available':env_data_available,
 								'env_train_data_lock':env_train_data_lock,
 								'agg' : agg,
@@ -171,6 +171,7 @@ if __name__ == "__main__":
 							'agent_weights_lock' : agent_weights_lock,
 							'rl_train_steps' : rl_train_steps,
 							'rl_perf_data' : rl_perf_data,
+							'online_mode' : online_mode,
 						}
 
 	)
@@ -180,6 +181,3 @@ if __name__ == "__main__":
 	model_learn_th.join()
 	data_gen_th.join()
 	deploy_ctrl_th.join()
-
-	print("End of program execution")
-
