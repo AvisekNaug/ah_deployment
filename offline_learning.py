@@ -61,6 +61,8 @@ if __name__ == "__main__":
 		rl_train_steps = 8000
 		# time stamp of the last time point in the 1 week test data; used to get tsdb data call
 		time_stamp = datetime(year = 2018, month = 11, day = 7, hour=0, minute=0, second=0)
+		# interval num for relearning : look at logs/Interval{} and write next number to prevent overwrite
+		interval = 1
 
 		save_path = 'tmp/'
 		model_path = 'models/'
@@ -185,6 +187,7 @@ if __name__ == "__main__":
 								'agent_weights_lock' : agent_weights_lock,
 								'rl_train_steps' : rl_train_steps,
 								'rl_perf_data' : rl_perf_data,
+								'interval' : interval,
 								'online_mode' : online_mode,
 								'logger':log})
 		ctrl_learn_th.start()
