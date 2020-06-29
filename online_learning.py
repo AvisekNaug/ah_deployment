@@ -51,10 +51,12 @@ if __name__ == "__main__":
 		# ------------From Ibrahim's controller.py script
 
 		exp_params = {}
+		# interval num for relearning : look at logs/Interval{} and write next number to prevent overwrite
+		interval = 9
 		# how to set prediction sections
-		relearn_interval_kwargs = {'days':0, 'hours':0, 'minutes':1, 'seconds':0}
+		relearn_interval_kwargs = {'days':0, 'hours':0, 'minutes':3, 'seconds':0}
 		# weeks to look back into for retraining
-		retrain_range_weeks = 13
+		retrain_range_weeks = 4
 		# number of epochs to train dynamic models
 		epochs = 1000
 		# num of steps to learn rl in each train method
@@ -77,10 +79,10 @@ if __name__ == "__main__":
 		# path to saved agent weights
 		best_rl_agent_path = 'models/best_rl_agent'
 
-		utils.make_dirs(cwe_data)
-		utils.make_dirs(hwe_data)
-		utils.make_dirs(vlv_data)
-		utils.make_dirs(env_data)
+		# utils.make_dirs(cwe_data)
+		# utils.make_dirs(hwe_data)
+		# utils.make_dirs(vlv_data)
+		# utils.make_dirs(env_data)
 		# utils.make_dirs(model_path)  # prevent data overwrite from offline exps
 		# utils.make_dirs(log_path)  # prevent data overwrite from offline exps
 		utils.make_dirs(results)
@@ -145,7 +147,7 @@ if __name__ == "__main__":
 			meta_data_ = json.load(fp)
 		agg = meta_data_['column_agg_type']
 		scaler = a_utils.dataframescaler(meta_data_['column_stats_half_hour'])
-
+		log.info("Main Thread: Online Loop Started")
 		deploy_ctrl_th = Thread(target=dctrl.deploy_control, daemon = False,
 							kwargs={'agent_weights_available' : agent_weights_available,
 									'agent_weights_lock' : agent_weights_lock,
@@ -202,6 +204,7 @@ if __name__ == "__main__":
 								'agent_weights_lock' : agent_weights_lock,
 								'rl_train_steps' : rl_train_steps,
 								'rl_perf_data' : rl_perf_data,
+								'interval' : interval,
 								'online_mode' : online_mode,
 								'logger':log,})
 		ctrl_learn_th.start()
