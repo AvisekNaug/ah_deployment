@@ -20,3 +20,4 @@ log.txt
 *.out
 experience.csv
 reheat_preheat_setpoint.txt
+trend_data
