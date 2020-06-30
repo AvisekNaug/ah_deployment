@@ -56,13 +56,15 @@ if __name__ == "__main__":
 		# weeks to look back into for retraining
 		retrain_range_weeks = 13
 		# number of epochs to train dynamic models
-		epochs = 1000
+		epochs = 10000
 		# num of steps to learn rl in each train method
-		rl_train_steps = 8000
+		rl_train_steps = 100000
 		# time stamp of the last time point in the 1 week test data; used to get tsdb data call
-		time_stamp = datetime(year = 2018, month = 11, day = 7, hour=0, minute=0, second=0)
+		time_stamp = datetime(year = 2020, month = 5, day = 1, hour=0, minute=0, second=0)
 		# interval num for relearning : look at logs/Interval{} and write next number to prevent overwrite
 		interval = 1
+		# week_num to end
+		week2end = 23
 
 		save_path = 'tmp/'
 		model_path = 'models/'
@@ -159,6 +161,7 @@ if __name__ == "__main__":
 									'database':'bdx_batch_db',
 									'measurement':'alumni_data_v2',
 									'save_path': save_path,
+									'week2end' : week2end,
 									'logger':log})
 		data_gen_th.start()
 

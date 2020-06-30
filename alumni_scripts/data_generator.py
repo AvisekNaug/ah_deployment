@@ -49,6 +49,9 @@ def offline_data_gen(*args, **kwargs):
 		relearn_interval_kwargs = kwargs['relearn_interval_kwargs']
 		# retrain range in weeks
 		retrain_range_weeks = kwargs['retrain_range_weeks']
+		# week_num to end
+		week2end = kwargs['week2end']
+ 
 
 		client = DataFrameClient(host='localhost', port=8086, database=kwargs['database'],)
 
@@ -113,7 +116,7 @@ def offline_data_gen(*args, **kwargs):
 				week_num = week_num if week_num%53 != 0 else 1
 				year_num = year_num if week_num!= 1 else year_num+1
 
-				if week_num == 2:  # can be other terminating condition like year==2020 & week=5 etc
+				if week_num == week2end:  # can be other terminating condition like year==2020 & week=5 etc
 					end_learning.set()
 					break
 	
