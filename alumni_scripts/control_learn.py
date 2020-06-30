@@ -68,9 +68,9 @@ def controller_learn(*args, **kwargs):
 				
 				"""Arguments to be fed to the custom environment inside make_vec_env"""
 				reward_params = {'energy_saved': 100.0, 'energy_savings_thresh': 0.0,
-								'energy_penalty': -100.0, 'energy_reward_weight': 0.5,
-								'comfort': 1.0, 'comfort_thresh': 0.10,
-								'uncomfortable': -1.0, 'comfort_reward_weight': 0.5,
+								'energy_penalty': -100.0, 'energy_reward_weight': 1.0,
+								'comfort': 0.1, 'comfort_thresh': 0.10,
+								'uncomfortable': -10, 'comfort_reward_weight': 1.0,
 								'action_minmax':[np.array([72]), np.array([65])]
 								}
 				env_kwargs = dict(  #  Optional keyword argument to pass to the env constructor
