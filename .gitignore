@@ -17,4 +17,6 @@ results
 # custom
 todo.txt
 log.txt
-nohup.out
+*.out
+experience.csv
+reheat_preheat_setpoint.txt
