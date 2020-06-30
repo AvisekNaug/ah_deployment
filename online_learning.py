@@ -119,7 +119,7 @@ if __name__ == "__main__":
 		exp_params['env_config'] = {
 			'save_path' : env_data, 'model_path': model_path, 'logs' : log_path,
 			'obs_space_vars' : ['oat', 'oah', 'wbt', 'avg_stpt', 'sat'], 
-			'action_space_vars' :['sat'], 
+			'action_space_vars' :['sat'],  # has to be same as sat since we are effectively replacing new sat with sat_stpt
 			'cwe_inputs' : ['sat-oat', 'oah', 'wbt', 'pchw_flow'],
 			'hwe_inputs' : ['oat', 'oah', 'wbt', 'sat-oat'],
 			'vlv_inputs' : ['oat', 'oah', 'wbt', 'sat-oat'],
