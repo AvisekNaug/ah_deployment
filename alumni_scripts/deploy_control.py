@@ -40,9 +40,8 @@ def deploy_control(*args, **kwargs):
 		# check variables if needed
 		obs_space_vars : list = kwargs['obs_space_vars']
 		scaler : a_utils.dataframescaler = kwargs['scaler']
-		relearn_interval_kwargs = kwargs['relearn_interval_kwargs']
 		stpt_delta = np.array([0.0]) # in delta F
-		stpt_unscaled = np.array([68])  # in F
+		stpt_unscaled = np.array([68.0])  # in F
 		stpt_scaled = scaler.minmax_scale(stpt_unscaled, ['sat'], ['sat'])
 		not_first_loop = False
 		period = kwargs['period']
@@ -86,11 +85,13 @@ def deploy_control(*args, **kwargs):
 
 			# predict new delta and add it to new temp var for next loop check
 			stpt_delta = rl_agent.predict(curr_obs_scaled)
-			stpt_unscaled[0] = stpt_unscaled[0] + stpt_delta[0]
+			log.info('Deploy Thread: Current SetPoint: {}'.format(curr_obs_unscaled[-1]))
+			log.info('Deploy Thread: Suggested Delta: {}'.format(stpt_delta[0][0]))
+			stpt_unscaled[0] = stpt_unscaled[0] + stpt_delta[0][0]
 			# clip it in case it crosses a range
-			stpt_unscaled = np.clip(stpt_unscaled, np.array([65]), np.array([72]))
+			stpt_unscaled = np.clip(stpt_unscaled, np.array([65.0]), np.array([72.0]))
 			# scale it
-			stpt_scaled = scaler.minmax_scale(stpt_unscaled, ['sat'], ['sat'])
+			stpt_scaled = scaler.minmax_scale(stpt_unscaled, ['sat_stpt'], ['sat_stpt'])
 
 			# write it to a file for BdX
 			with open('reheat_preheat_setpoint.txt', 'a+') as cfile:
@@ -101,7 +102,7 @@ def deploy_control(*args, **kwargs):
 			# write output to file for our use
 			fout = np.concatenate((curr_obs_unscaled, stpt_unscaled))
 			with open('experience.csv', 'a+') as cfile:
-				cfile.write('{}, {:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f}\n'.format(datetime.now(), fout[0],
+				cfile.write('{}, {:.4f}, {:.4f}, {:.4f}, {:.4f}, {:.4f}, {:.4f}\n'.format(datetime.now(), fout[0],
 				fout[1], fout[2], fout[3], fout[4], fout[5]))
 			cfile.close()
 
