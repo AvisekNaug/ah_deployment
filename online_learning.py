@@ -52,15 +52,15 @@ if __name__ == "__main__":
 
 		exp_params = {}
 		# interval num for relearning : look at logs/Interval{} and write next number to prevent overwrite
-		interval = 9
+		interval = 5
 		# how to set prediction sections
-		relearn_interval_kwargs = {'days':0, 'hours':0, 'minutes':3, 'seconds':0}
+		relearn_interval_kwargs = {'days':1, 'hours':0, 'minutes':0, 'seconds':0}
 		# weeks to look back into for retraining
-		retrain_range_weeks = 4
+		retrain_range_weeks = 13
 		# number of epochs to train dynamic models
-		epochs = 1000
+		epochs = 10000
 		# num of steps to learn rl in each train method
-		rl_train_steps = 4500
+		rl_train_steps = 100000
 		# period of data
 		period = 6 # 1 = 5 mins, 6 = 30 mins
 
@@ -147,7 +147,7 @@ if __name__ == "__main__":
 			meta_data_ = json.load(fp)
 		agg = meta_data_['column_agg_type']
 		scaler = a_utils.dataframescaler(meta_data_['column_stats_half_hour'])
-		log.info("Main Thread: Online Loop Started")
+		log.info("------------Main Thread: Online Loop Started------------------")
 		deploy_ctrl_th = Thread(target=dctrl.deploy_control, daemon = False,
 							kwargs={'agent_weights_available' : agent_weights_available,
 									'agent_weights_lock' : agent_weights_lock,

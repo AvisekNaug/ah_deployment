@@ -106,7 +106,7 @@ def deploy_control(*args, **kwargs):
 			cfile.close()
 
 			# sleep for 30 mins before next output
-			time.sleep(timedelta(**relearn_interval_kwargs).seconds)
+			time.sleep(timedelta(minutes=30).seconds)
 
 	except Exception as e:
 		log.error('Control Deploy Module: %s', str(e))
