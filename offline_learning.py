@@ -56,15 +56,15 @@ if __name__ == "__main__":
 		# weeks to look back into for retraining
 		retrain_range_weeks = 13
 		# number of epochs to train dynamic models
-		epochs = 10000
+		epochs = 20000
 		# num of steps to learn rl in each train method
-		rl_train_steps = 100000
+		rl_train_steps = 40000
 		# time stamp of the last time point in the 1 week test data; used to get tsdb data call
-		time_stamp = datetime(year = 2020, month = 5, day = 1, hour=0, minute=0, second=0)
+		time_stamp = datetime(year = 2020, month = 5, day = 31, hour=0, minute=0, second=0)
 		# interval num for relearning : look at logs/Interval{} and write next number to prevent overwrite
 		interval = 1
 		# week_num to end
-		week2end = 23
+		week2end = 24
 
 		save_path = 'tmp/'
 		model_path = 'models/'
@@ -203,6 +203,7 @@ if __name__ == "__main__":
 		except KeyboardInterrupt:
 			end_learning.set()
 			log.info('Safely exiting')
+		log.info("Main Thread : Offine Training Finished")
 
 	except Exception as e:
 		log.critical('Could not launch script:\n%s', str(e))
