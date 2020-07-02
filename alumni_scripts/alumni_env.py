@@ -58,6 +58,7 @@ class Env(gym.Env):
 		self.viewer = None
 		'''End: standard requirements for interfacing with gym environments'''
 
+
 	def re_init_env(self, df, totaldf_stats,
 				 obs_space_vars : list,
 				 action_space_vars : list,
@@ -122,6 +123,7 @@ class Env(gym.Env):
 		self.params = kwargs
 		'''End: Requirements for our own environment'''
 
+
 	def reset(self,):
 
 		# Helps iterate through the data file. This is not the actual observation
@@ -135,7 +137,11 @@ class Env(gym.Env):
 
 		return self.s.to_numpy().flatten()  # flatten them before feeding to the rl agent
 
+
 	def step(self, a):
+
+		# cache the action needed for test phase logging
+		self.delta_unscaled = a.flatten()[0]
 
 		# Advance datapointer to next row in the dataframe
 		if not self.testing:
@@ -197,12 +203,12 @@ class Env(gym.Env):
 		hist_energy = hwe_hist_energy #+  cwe_hist_energy
 
 		# 'energy_saved' reward if at least 'energy_savings_thresh' energy saved else 'energy_penalty' reward
-		reward_energy = self.params['energy_saved']*(hist_energy-rl_energy) \
-			if hist_energy-rl_energy>self.params['energy_savings_thresh'] \
-			else self.params['energy_penalty']*(-hist_energy+rl_energy)
-		# reward_energy = hist_energy-rl_energy
+		# reward_energy = self.params['energy_saved']*(hist_energy-rl_energy) \
+		# 	if hist_energy-rl_energy>self.params['energy_savings_thresh'] \
+		# 	else self.params['energy_penalty']*(-hist_energy+rl_energy)
+		reward_energy = hist_energy-rl_energy
 		# reward_energy *= self.params['energy_reward_weight']  # don't weight it so that we can try ad hoc weights
-		reward_energy /= 0.01*self.episode_length  # scale reward in case the episode lengths are not equal
+		reward_energy /= 0.02*self.episode_length  # scale reward in case the episode lengths are not equal
 
 		'''Comfort Reward'''
 		# exrtact rl discharge air temeprature
@@ -210,10 +216,10 @@ class Env(gym.Env):
 		# extract vrf average setpoint temperature
 		avg_vrf_stpt = s.loc[s.index[0], 'avg_stpt']
 		# 'comfort' reward if T_rl_disch close to avg_vrf_stpt by 'comfort_thresh' else 'uncomfort' reward
-		reward_comfort = self.params['comfort']/(abs(T_rl_disch-avg_vrf_stpt) + 0.1) \
-			if abs(T_rl_disch-avg_vrf_stpt) < self.params['comfort_thresh'] \
-			else self.params['uncomfortable']*abs(T_rl_disch-avg_vrf_stpt)
-		# reward_comfort = -1*abs(T_rl_disch-avg_vrf_stpt)
+		# reward_comfort = self.params['comfort']/(abs(T_rl_disch-avg_vrf_stpt) + 0.1) \
+		# 	if abs(T_rl_disch-avg_vrf_stpt) < self.params['comfort_thresh'] \
+		# 	else self.params['uncomfortable']*abs(T_rl_disch-avg_vrf_stpt)
+		reward_comfort = -1*abs(T_rl_disch-avg_vrf_stpt)
 		# reward_comfort *= self.params['comfort_reward_weight']  # don't weight it so that we can try ad hoc weights
 		reward_comfort /= 0.01*self.episode_length  # scale reward in case the episode lengths are not equal
 
@@ -234,7 +240,8 @@ class Env(gym.Env):
 						'wbt': s.loc[s.index[0], 'wbt'],
 						# 'rl_sat': s.loc[s.index[0], 'sat'],
 						'T_rl_disch': T_rl_disch,
-						'avg_stpt': s.loc[s.index[0], 'avg_stpt']
+						'avg_stpt': s.loc[s.index[0], 'avg_stpt'],
+						'delta_unscaled' : self.delta_unscaled
 						}
 		else:
 			step_info = {}
@@ -328,6 +335,7 @@ class Env(gym.Env):
 		self.testing = False
 		self.dataptr = 0
 		self.episode_length = self.train_data_limit
+
 
 	def cache_hist_action(self,):
 
