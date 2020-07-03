@@ -58,9 +58,9 @@ if __name__ == "__main__":
 		# number of epochs to train dynamic models
 		epochs = 20000
 		# num of steps to learn rl in each train method
-		rl_train_steps = 40000
+		rl_train_steps = 50000
 		# time stamp of the last time point in the 1 week test data; used to get tsdb data call
-		time_stamp = datetime(year = 2020, month = 5, day = 31, hour=0, minute=0, second=0)
+		time_stamp = datetime(year = 2020, month = 2, day = 15, hour=0, minute=0, second=0)
 		# interval num for relearning : look at logs/Interval{} and write next number to prevent overwrite
 		interval = 1
 		# week_num to end

@@ -58,9 +58,9 @@ if __name__ == "__main__":
 		# weeks to look back into for retraining
 		retrain_range_weeks = 13
 		# number of epochs to train dynamic models
-		epochs = 10000
+		epochs = 20000
 		# num of steps to learn rl in each train method
-		rl_train_steps = 100000
+		rl_train_steps = 40000
 		# period of data
 		period = 6 # 1 = 5 mins, 6 = 30 mins
 

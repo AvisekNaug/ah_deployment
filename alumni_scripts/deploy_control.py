@@ -64,11 +64,11 @@ def deploy_control(*args, **kwargs):
 
 			# if we want to set the sat to the exact value from previous time step
 			# comment it out if not
-			if not_first_loop:
-				curr_obs_scaled[-1] = stpt_scaled[0]
-				curr_obs_unscaled[-1] = stpt_unscaled[0]
-			else:
-				not_first_loop = True
+			# if not_first_loop:
+			# 	curr_obs_scaled[-1] = stpt_scaled[0]
+			# 	curr_obs_unscaled[-1] = stpt_unscaled[0]
+			# else:
+			# 	not_first_loop = True
 
 			# check individual values to lie in appropriate range
 			# already done by online_data_clean method

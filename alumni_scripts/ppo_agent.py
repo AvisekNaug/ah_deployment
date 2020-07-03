@@ -16,7 +16,7 @@ with warnings.catch_warnings():
 	from stable_baselines.results_plotter import ts2xy
 
 # current best mean reward
-best_mean_reward = -np.inf
+best_mean_reward = 543.98  # -np.inf
 #steps completed
 total_time_steps = 0
 

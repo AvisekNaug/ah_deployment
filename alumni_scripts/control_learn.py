@@ -41,7 +41,7 @@ def controller_learn(*args, **kwargs):
 		online_mode = kwargs['online_mode']
 		best_rl_agent_path = kwargs['env_config']['model_path'] + 'best_rl_agent'
 
-		while not end_learning.is_set():
+		while (not end_learning.is_set()) | (env_data_available.is_set()):
 
 			# if data for alumni env and energy models are available, and agent_weights have not been updated
 			# after last read then run controller training --!! To ber set to clear for offline training
@@ -68,18 +68,18 @@ def controller_learn(*args, **kwargs):
 				
 				"""Arguments to be fed to the custom environment inside make_vec_env"""
 				reward_params = {'energy_saved': 100.0, 'energy_savings_thresh': 0.0,
-								'energy_penalty': -100.0, 'energy_reward_weight': 0.3,
+								'energy_penalty': -100.0, 'energy_reward_weight': 0.7,
 								'comfort': 1.0, 'comfort_thresh': 0.10,
-								'uncomfortable': -10.0, 'comfort_reward_weight': 0.7,
-								'action_minmax':[np.array([72]), np.array([65])]
+								'uncomfortable': -10.0, 'comfort_reward_weight': 0.3,
+								'action_minmax':[np.array([65]), np.array([72])]
 								}
 				env_kwargs = dict(  #  Optional keyword argument to pass to the env constructor
 					df = df_scaled,
 					totaldf_stats = df_scaled_stats,
 					obs_space_vars=kwargs['env_config']['obs_space_vars'],
 					action_space_vars=kwargs['env_config']['action_space_vars'],
-					action_space_bounds=[[-4.0], [4.0]],  # bounds for real world action space; is scaled
-					# internally using the reward_params; the agent weights output action in this +-4 range
+					action_space_bounds=[[-2.0], [2.0]],  # bounds for real world action space; is scaled
+					# internally using the reward_params; the agent weights output action in this +-2 range
 
 					cwe_energy_model=cwe_energy_model,
 					cwe_input_vars=kwargs['env_config']['cwe_inputs'],

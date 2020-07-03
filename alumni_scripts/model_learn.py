@@ -30,7 +30,7 @@ def data_driven_model_learn(*args, **kwargs):
 		# to_break = False
 
 		# Read the processed data and learn the 3 models inside a conditional loop
-		while not end_learning.is_set():
+		while (not end_learning.is_set()) | (lstm_data_available.is_set()):
 
 			if not models_created:  # create the 3 models needed for training
 
