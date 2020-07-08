@@ -65,6 +65,8 @@ if __name__ == "__main__":
 		interval = 1
 		# week_num to end
 		week2end = 24
+		# reinitialize agent at the end of every learning iteration
+		reinit_agent = False
 
 		save_path = 'tmp/'
 		model_path = 'models/'
@@ -192,6 +194,7 @@ if __name__ == "__main__":
 								'rl_perf_data' : rl_perf_data,
 								'interval' : interval,
 								'online_mode' : online_mode,
+								'reinit_agent' : reinit_agent,
 								'logger':log})
 		ctrl_learn_th.start()
 
