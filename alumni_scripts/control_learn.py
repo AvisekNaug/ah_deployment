@@ -38,6 +38,7 @@ def controller_learn(*args, **kwargs):
 		agent_created = False
 		writeheader = True
 		# to_break = False
+		reinit_agent = kwargs['reinit_agent']
 		online_mode = kwargs['online_mode']
 		best_rl_agent_path = kwargs['env_config']['model_path'] + 'best_rl_agent'
 
@@ -122,12 +123,20 @@ def controller_learn(*args, **kwargs):
 												monitor_log_dir = kwargs['env_config']['logs'],
 												logger = log)
 					log.info("Control Learn Module: Agent Created")
+
+					# save initialized weights: load at each loop for better results w/o creating
+					# additional agent grahps in tf.Graph
+					agent.save(kwargs['env_config']['model_path'] + 'init_rl_agent')
+
 					if online_mode:
 						agent.load(best_rl_agent_path, env = env)
 						log.info("Control Learn Module: Agent Weights loaded from Offline Phase")
-						#online_mode = False
+						# online_mode = False
 					agent_created = True
 				# ** agent uses "monitor_log_dir" to update agent by looking at rewards
+				
+				elif reinit_agent:
+					agent.load_parameters(kwargs['env_config']['model_path'] + 'init_rl_agent')
 				
 				"""Start training the agent"""
 				log.info("Control Learn Module: Environment Set to train mode")

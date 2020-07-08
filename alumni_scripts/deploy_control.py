@@ -28,10 +28,10 @@ def deploy_control(*args, **kwargs):
 			api_args = json.load(fp)
 		with open('alumni_scripts/meta_data.json', 'r') as fp:
 			meta_data_ = json.load(fp)
-		with open('experience.csv', 'a+') as cfile:
-			cfile.write('{}, {}, {}, {}, {}, {}, {}\n'.format('time', 'oat', 'oah', 'wbt',
-			'avg_stpt', 'sat', 'rlstpt'))
-		cfile.close()
+		# with open('experience.csv', 'a+') as cfile:
+		# 	cfile.write('{}, {}, {}, {}, {}, {}, {}, {}\n'.format('time', 'oat', 'oah', 'wbt',
+		# 	'avg_stpt', 'sat', 'rlstpt', 'hist_stpt'))
+		# cfile.close()
 
 		agent_weights_available : Event = kwargs['agent_weights_available']  # deploy loop can read the agent weights now
 		end_learning : Event = kwargs['end_learning']
@@ -51,24 +51,24 @@ def deploy_control(*args, **kwargs):
 			with agent_weights_lock:
 				rl_agent = PPO2.load(kwargs['best_rl_agent_path'])
 			agent_weights_available.clear()
-			log.info('Deploy Thread: Controller Weights Read from offline phase')
+			log.info('Deploy Control Module: Controller Weights Read from offline phase')
 		else:
 			raise FileNotFoundError
 
 		while not end_learning.is_set():
 		
 			# get current scaled and uncsaled observation
-			df, df_unscaled = get_real_obs(api_args, meta_data_, obs_space_vars, scaler, period, log)
+			df, df_unscaled, hist_stpt = get_real_obs(api_args, meta_data_, obs_space_vars, scaler, period, log)
 			curr_obs_scaled = df.to_numpy().flatten()
 			curr_obs_unscaled = df_unscaled.to_numpy().flatten()
 
 			# if we want to set the sat to the exact value from previous time step
 			# comment it out if not
-			# if not_first_loop:
-			# 	curr_obs_scaled[-1] = stpt_scaled[0]
-			# 	curr_obs_unscaled[-1] = stpt_unscaled[0]
-			# else:
-			# 	not_first_loop = True
+			if not_first_loop:
+				curr_obs_scaled[-1] = stpt_scaled[0]
+				curr_obs_unscaled[-1] = stpt_unscaled[0]
+			else:
+				not_first_loop = True
 
 			# check individual values to lie in appropriate range
 			# already done by online_data_clean method
@@ -81,13 +81,13 @@ def deploy_control(*args, **kwargs):
 				with agent_weights_lock:
 					rl_agent = PPO2.load(kwargs['best_rl_agent_path'])
 				agent_weights_available.clear()
-				log.info('Deploy Thread: Controller Weights Adapted')
+				log.info('Deploy Control Module: Controller Weights Adapted')
 
 			# predict new delta and add it to new temp var for next loop check
 			stpt_delta = rl_agent.predict(curr_obs_scaled)
-			log.info('Deploy Thread: Current SetPoint: {}'.format(curr_obs_unscaled[-1]))
-			log.info('Deploy Thread: Suggested Delta: {}'.format(stpt_delta[0][0]))
-			stpt_unscaled[0] = stpt_unscaled[0] + stpt_delta[0][0]
+			log.info('Deploy Control Module: Current SetPoint: {}'.format(curr_obs_unscaled[-1]))
+			log.info('Deploy Control Module: Suggested Delta: {}'.format(stpt_delta[0][0]))
+			stpt_unscaled[0] = curr_obs_unscaled[-1] + float(stpt_delta[0])  # stpt_unscaled[0] 
 			# clip it in case it crosses a range
 			stpt_unscaled = np.clip(stpt_unscaled, np.array([65.0]), np.array([72.0]))
 			# scale it
@@ -100,17 +100,17 @@ def deploy_control(*args, **kwargs):
 			cfile.close()
 
 			# write output to file for our use
-			fout = np.concatenate((curr_obs_unscaled, stpt_unscaled))
+			fout = np.concatenate((curr_obs_unscaled, stpt_unscaled, hist_stpt))
 			with open('experience.csv', 'a+') as cfile:
-				cfile.write('{}, {:.4f}, {:.4f}, {:.4f}, {:.4f}, {:.4f}, {:.4f}\n'.format(datetime.now(), fout[0],
-				fout[1], fout[2], fout[3], fout[4], fout[5]))
+				cfile.write('{}, {:.4f}, {:.4f}, {:.4f}, {:.4f}, {:.4f}, {:.4f}, {:.4f}\n'.format(datetime.now(), fout[0],
+				fout[1], fout[2], fout[3], fout[4], fout[5], fout[6]))
 			cfile.close()
 
 			# sleep for 30 mins before next output
 			time.sleep(timedelta(minutes=30).seconds)
 
 	except Exception as e:
-		log.error('Control Deploy Module: %s', str(e))
+		log.error('Deploy Control Module: %s', str(e))
 		log.debug(e, exc_info=True)
 
 
@@ -132,8 +132,11 @@ def get_real_obs(api_args: dict, meta_data_: dict, obs_space_vars : list, scaler
 		api_args.update(time_args)
 
 		# pull the data into csv file
-		dp.pull_online_data(**api_args)
-		log.info('DeployGetRealObs: Deployment Data obtained from API')
+		try:
+			dp.pull_online_data(**api_args)
+			log.info('Deploy Control Module: Deployment Data obtained from API')
+		except Exception:
+			log.info('Deploy Control Module: BdX API could not get data: will resuse old data')
 
 		# get the dataframe from a csv
 		df_ = read_csv('data/trend_data/alumni_data_deployment.csv', )
@@ -142,7 +145,7 @@ def get_real_obs(api_args: dict, meta_data_: dict, obs_space_vars : list, scaler
 		df_ = a_utils.dropNaNrows(df_)
 
 		# add wet bulb temperature to the data
-		log.info('DeployGetRealObs: Start of Wet Bulb Data Calculation')
+		log.info('Deploy Control Module: Start of Wet Bulb Data Calculation')
 		rh = df_['WeatherDataProfile humidity']/100
 		rh = rh.to_numpy()
 		t_db = 5*(df_['AHU_1 outdoorAirTemp']-32)/9 + 273.15
@@ -150,13 +153,16 @@ def get_real_obs(api_args: dict, meta_data_: dict, obs_space_vars : list, scaler
 		T = HAPropsSI('T_wb','R',rh,'T',t_db,'P',101325)
 		t_f = 9*(T-273.15)/5 + 32
 		df_['wbt'] = t_f
-		log.info('DeployGetRealObs: Wet Bulb Data Calculated')
+		log.info('Deploy Control Module: Wet Bulb Data Calculated')
 
 		# rename the columns
 		new_names = []
 		for i in df_.columns:
 			new_names.append(meta_data_["reverse_col_alias"][i])
 		df_.columns = new_names
+
+		# collect current set point
+		hist_stpt = df_.loc[df_.index[-1],['sat_stpt']].to_numpy().copy().flatten()
 
 		# clean the data
 		df_cleaned = dp.online_data_clean(
@@ -200,10 +206,10 @@ def get_real_obs(api_args: dict, meta_data_: dict, obs_space_vars : list, scaler
 		# rearrange observation cols
 		df_unscaled = df_unscaled[obs_space_vars] 
 
-		return df_cleaned, df_unscaled
+		return df_cleaned, df_unscaled, hist_stpt
 
 	except Exception as e:
-		log.error('Control Deploy Get Obs Module: %s', str(e))
+		log.error('Deploy Control Module: %s', str(e))
 		log.debug(e, exc_info=True)
 
 

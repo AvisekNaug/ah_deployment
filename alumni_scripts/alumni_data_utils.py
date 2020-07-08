@@ -462,7 +462,8 @@ def dataframeplot(df, lazy = True, style = 'b--', ylabel : str = 'Y-axis', xlabe
 
 	df_dates = df.index
 	dates_num = date2num(list(df_dates))
-
+	if isinstance(style,str):
+		style = [style]*df.shape[1]
 
 
 	if not lazy:
@@ -471,17 +472,29 @@ def dataframeplot(df, lazy = True, style = 'b--', ylabel : str = 'Y-axis', xlabe
 		font = {'family': "Times New Roman"}
 		plt.rc('font', **font)
 		_, ax = plt.subplots(nrows = df.shape[1], squeeze=False, constrained_layout=True)
-		for i,j in zip(df.columns,range(df.shape[1])):
+		for i, j, k in zip(df.columns, range(df.shape[1]), style):
 			#df.plot(y=[i],ax=ax[j][0],style=[style], legend=legend)
-			ax[j][0].plot_date(dates_num, df[i], style, label=i)
+			ax[j][0].plot_date(dates_num, df[i], k, label=i)
 			ax[j][0].set_xlabel(xlabel)
 			ax[j][0].set_ylabel(i)
 			ax[j][0].legend(prop={'size':14})
 		plt.show()
 	else:
-		ax = df.plot(y=df.columns, figsize=(20,7), legend=legend, style = [style]*df.shape[1])
-		ax.set_xlabel(xlabel)
-		ax.set_ylabel(ylabel)
+		# ax = df.plot(y=df.columns, figsize=(20,7), legend=legend, style = style)
+		# ax.set_xlabel(xlabel)
+		# ax.set_ylabel(ylabel)
+		# ax.legend(prop={'size':18})
+		# plt.show()
+		width, height = 20, 10
+		plt.rcParams["figure.figsize"] = (width, height)
+		font = {'family': "Times New Roman"}
+		plt.rc('font', **font)
+		_, ax = plt.subplots(nrows = 1, squeeze=False, constrained_layout=True)
+		for i, k in zip(df.columns, style):
+			ax[0][0].plot_date(dates_num, df[i], k, label=i)
+			ax[0][0].set_xlabel(xlabel)
+			ax[0][0].set_ylabel(ylabel)
+			ax[0][0].legend(prop={'size':24})
 		plt.show()
 
 

@@ -16,7 +16,7 @@ with warnings.catch_warnings():
 	from stable_baselines.results_plotter import ts2xy
 
 # current best mean reward
-best_mean_reward = 543.98  # -np.inf
+best_mean_reward = 167.0  # -np.inf
 #steps completed
 total_time_steps = 0
 
@@ -93,14 +93,14 @@ def CustomCallBack(_locals, _globals):
 			# Average reward for last 5 episodes across all environments in one go by using None
 			mean_reward = np.mean(np.array(y_list)[:,-5:], axis = None)
 			# Average across all environments in one go by using None
-			log.info('An average of {} episodes completed'.format(np.mean(np.array(x_list)[:,-1], axis = None)))
+			log.info('Control Learn Module: An average of {} episodes completed'.format(np.mean(np.array(x_list)[:,-1], axis = None)))
 			# Compare Reward
-			log.info("Best mean reward: {:.2f} - Latest 5 sample mean reward per episode: {:.2f}".format(best_mean_reward, mean_reward))
+			log.info("Control Learn Module: Best mean reward: {:.2f} - Latest 5 sample mean reward per episode: {:.2f}".format(best_mean_reward, mean_reward))
 			# New best model, you could save the agent here
 			if mean_reward > best_mean_reward:
 				best_mean_reward = mean_reward
 				# Example for saving best model
-				log.info("PPO Agent: Saving New Best Model")
+				log.info("Control Learn Module:: Saving New Best Model")
 				self_.save(self_.model_save_dir + 'best_rl_agent')
 	total_time_steps += self_.env.num_envs
 
