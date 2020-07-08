@@ -499,8 +499,11 @@ def get_train_data(api_args, meta_data_, retrain_range_weeks, log):
 		api_args.update(time_args)
 
 		# pull the data into csv file
-		dp.pull_offline_data(**api_args)
-		log.info('OnlineDataGen: Train Data Obtained  using API')
+		try:
+			dp.pull_offline_data(**api_args)
+			log.info('OnlineDataGen: Train Data Obtained  using API')
+		except Exception:
+			log.info('OnlineDataGen: BdX API could not get train data: will resuse old data')
 
 		# get the dataframe from a csv
 		df_ = read_csv('data/trend_data/alumni_data_train.csv', )
