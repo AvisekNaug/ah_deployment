@@ -47,14 +47,14 @@ if __name__ == "__main__":
 		_logfile_handler.setFormatter(_formatter)   # Set up the format of log messages
 		log.addHandler(_logfile_handler)            # add this handler to the logger
 		# set up logging severity
-		log.setLevel(logging.INFO)
+		log.setLevel(logging.DEBUG)
 		# ------------From Ibrahim's controller.py script
 
 		exp_params = {}
 		# interval num for relearning : look at logs/Interval{} and write next number to prevent overwrite
-		interval = 5
-		# how to set prediction sections
-		relearn_interval_kwargs = {'days':1, 'hours':0, 'minutes':0, 'seconds':0}
+		interval = 1
+		# how to set relearning interval
+		relearn_interval_kwargs = {'days':0, 'hours':6, 'minutes':0, 'seconds':0}
 		# weeks to look back into for retraining
 		retrain_range_weeks = 13
 		# number of epochs to train dynamic models
@@ -63,6 +63,8 @@ if __name__ == "__main__":
 		rl_train_steps = 40000
 		# period of data
 		period = 6 # 1 = 5 mins, 6 = 30 mins
+		# reinitialize agent at the end of every learning iteration
+		reinit_agent = True
 
 		save_path = 'tmp/'
 		model_path = 'models/'
@@ -206,6 +208,7 @@ if __name__ == "__main__":
 								'rl_perf_data' : rl_perf_data,
 								'interval' : interval,
 								'online_mode' : online_mode,
+								'reinit_agent' : reinit_agent,
 								'logger':log,})
 		ctrl_learn_th.start()
 
