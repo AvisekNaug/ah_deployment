@@ -47,7 +47,7 @@ def update_graph_scatter(_):
             mode= 'lines+markers')
     data4 = go.Scatter(x=list(df['time'].to_numpy().flatten()),
             y=list(df['hist_stpt'].to_numpy().flatten()),
-            name='Historical AHU1 Set Point',
+            name='Rule Based AHU1 Set Point',
             mode= 'lines+markers')
     
     myfigure = go.Figure(data = [data1, data2, data3, data4], 
@@ -69,3 +69,6 @@ if __name__ == '__main__':
 
 # To run as a safe production server, run it as 
 # waitress-serve --host 129.59.104.221 --port 8810 live_plot:app.server
+
+# ps -u nauga (except sudo influxd which we get from ps -auxf)
+# kill -9 PID
