@@ -4,6 +4,7 @@ implements a ppo agent for the Alumni Hall
 import os
 import numpy as np
 import glob
+import re
 
 import csv
 import json
@@ -16,7 +17,7 @@ with warnings.catch_warnings():
 	from stable_baselines.results_plotter import ts2xy
 
 # current best mean reward
-best_mean_reward = 167.0  # -np.inf
+best_mean_reward = 100.0  # -np.inf
 #steps completed
 total_time_steps = 0
 
@@ -52,8 +53,13 @@ def train_agent(agent, env=None, steps=30000, tb_log_name = "../log/ppo2_event_f
 	"""
 	Train the agent on the environment
 	"""
+
+	global best_mean_reward
+	best_mean_reward = 100.0
+
 	if env is not None:
 		agent.set_env(env)
+	
 	trained_agent = agent.learn(total_timesteps=steps, callback=CustomCallBack)
 
 	return trained_agent
@@ -84,7 +90,15 @@ def CustomCallBack(_locals, _globals):
 		y_list = []
 		for env_id in range(self_.env.num_envs):
 			monitor_files = glob.glob(self_.monitor_log_dir+'**/'+str(env_id)+'.monitor.csv')
-			x, y = ts2xy(custom_load_results(monitor_files), 'episodes')
+			# new method to sort goes  here
+			interval_num = []
+			for fname in monitor_files:
+				interval_num.append(int(re.split(r'(\d+)', fname)[1]))
+			interval_num_sorted = sorted(interval_num)
+			sorted_monitor_files = []
+			sorted_monitor_files = ['{}Interval_{}/{}.monitor.csv'.format(self_.monitor_log_dir,i,env_id) for i in interval_num_sorted]
+
+			x, y = ts2xy(custom_load_results([sorted_monitor_files[-1]]), 'episodes')
 			x_list.append(x)
 			y_list.append(y)
 
