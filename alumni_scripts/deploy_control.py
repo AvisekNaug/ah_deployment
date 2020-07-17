@@ -2,7 +2,7 @@
 This script containts methods that will observe the current state of the Alumni Hall
 and issue a temperature set point to be sent as the set point for the building.
 """
-
+from os import path
 import numpy as np
 from pandas import read_csv, to_datetime, DataFrame
 import json
@@ -28,10 +28,11 @@ def deploy_control(*args, **kwargs):
 			api_args = json.load(fp)
 		with open('alumni_scripts/meta_data.json', 'r') as fp:
 			meta_data_ = json.load(fp)
-		# with open('experience.csv', 'a+') as cfile:
-		# 	cfile.write('{}, {}, {}, {}, {}, {}, {}, {}\n'.format('time', 'oat', 'oah', 'wbt',
-		# 	'avg_stpt', 'sat', 'rlstpt', 'hist_stpt'))
-		# cfile.close()
+		if not path.exists("experience.csv"):
+			with open('experience.csv', 'a+') as cfile:
+				cfile.write('{}, {}, {}, {}, {}, {}, {}, {}\n'.format('time', 'oat', 'oah', 'wbt',
+				'avg_stpt', 'sat', 'rlstpt', 'hist_stpt'))
+			cfile.close()
 
 		agent_weights_available : Event = kwargs['agent_weights_available']  # deploy loop can read the agent weights now
 		end_learning : Event = kwargs['end_learning']
@@ -43,7 +44,7 @@ def deploy_control(*args, **kwargs):
 		stpt_delta = np.array([0.0]) # in delta F
 		stpt_unscaled = np.array([68.0])  # in F
 		stpt_scaled = scaler.minmax_scale(stpt_unscaled, ['sat'], ['sat'])
-		not_first_loop = False
+		not_first_loop = True
 		period = kwargs['period']
 
 		# an initial trained model has to exist
@@ -94,7 +95,7 @@ def deploy_control(*args, **kwargs):
 			stpt_scaled = scaler.minmax_scale(stpt_unscaled, ['sat_stpt'], ['sat_stpt'])
 
 			# write it to a file for BdX
-			with open('reheat_preheat_setpoint.txt', 'a+') as cfile:
+			with open('reheat_preheat_setpoint.txt', 'w') as cfile:
 				cfile.seek(0)
 				cfile.write('{}\n'.format(str(stpt_unscaled[0])))
 			cfile.close()
