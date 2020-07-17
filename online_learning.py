@@ -4,6 +4,7 @@ This script will control the "Supply Air Set Point" for the Air Handling Units. 
 is now being created to formalize the main components needed in creating the relearning agent.
 """
 import os
+from os import path
 # Enable '0' or disable '' GPU use
 os.environ['CUDA_VISIBLE_DEVICES'] = ''
 from multiprocessing import Event, Lock
@@ -54,13 +55,13 @@ if __name__ == "__main__":
 		# interval num for relearning : look at logs/Interval{} and write next number to prevent overwrite
 		interval = 1
 		# how to set relearning interval
-		relearn_interval_kwargs = {'days':0, 'hours':6, 'minutes':0, 'seconds':0}
+		relearn_interval_kwargs = {'days':0, 'hours':24, 'minutes':0, 'seconds':0}
 		# weeks to look back into for retraining
 		retrain_range_weeks = 13
 		# number of epochs to train dynamic models
 		epochs = 20000
 		# num of steps to learn rl in each train method
-		rl_train_steps = 40000
+		rl_train_steps = 80000
 		# period of data
 		period = 6 # 1 = 5 mins, 6 = 30 mins
 		# reinitialize agent at the end of every learning iteration
@@ -81,14 +82,21 @@ if __name__ == "__main__":
 		# path to saved agent weights
 		best_rl_agent_path = 'models/best_rl_agent'
 
-		# utils.make_dirs(cwe_data)
-		# utils.make_dirs(hwe_data)
-		# utils.make_dirs(vlv_data)
-		# utils.make_dirs(env_data)
-		# utils.make_dirs(model_path)  # prevent data overwrite from offline exps
-		# utils.make_dirs(log_path)  # prevent data overwrite from offline exps
+		if not path.exists(cwe_data):
+			utils.make_dirs(cwe_data)  # prevent data overwrite from offline exps
+		if not path.exists(hwe_data):
+			utils.make_dirs(hwe_data)  # prevent data overwrite from offline exps
+		if not path.exists(vlv_data):
+			utils.make_dirs(vlv_data)  # prevent data overwrite from offline exps
+		if not path.exists(env_data):
+			utils.make_dirs(env_data)  # prevent data overwrite from offline exps
+		if not path.exists(model_path):
+			utils.make_dirs(model_path)  # prevent data overwrite from offline exps
+		if not path.exists(log_path):
+			utils.make_dirs(log_path)  # prevent data overwrite from offline exps
 		utils.make_dirs(results)
-		#utils.make_dirs(rl_perf_data)  # prevent data overwrite from offline exps
+		if not path.exists(rl_perf_data):
+			utils.make_dirs(rl_perf_data)  # prevent data overwrite from offline exps
 		utils.make_dirs(trend_data)
 
 		exp_params['cwe_model_config'] = {
