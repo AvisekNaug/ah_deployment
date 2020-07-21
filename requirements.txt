@@ -1,8 +1,8 @@
+git+https://git.isis.vanderbilt.edu/SmartBuildings/bdx@v0.2.5
 tensorflow_gpu==1.14.0
 dash_core_components==1.10.1
 numpy==1.18.1
 dash_html_components==1.0.3
-git+https://git.isis.vanderbilt.edu/SmartBuildings/bdx@v0.2.5
 gym==0.16.0
 dash==1.13.4
 influxdb==5.3.0
