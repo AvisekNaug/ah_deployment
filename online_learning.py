@@ -57,7 +57,7 @@ if __name__ == "__main__":
 		# how to set relearning interval
 		relearn_interval_kwargs = {'days':7, 'hours':0, 'minutes':0, 'seconds':0}
 		# weeks to look back into for retraining
-		retrain_range_weeks = 6
+		retrain_range_weeks = 10
 		# number of epochs to train dynamic models
 		epochs = 900000
 		# num of steps to learn rl in each train method
