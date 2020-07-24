@@ -19,7 +19,6 @@ from sklearn.preprocessing import MinMaxScaler
 
 
 import pandas as pd
-import swifter
 from scipy import stats
 from scipy.fftpack import fft
 import scipy.signal as signal
@@ -435,7 +434,7 @@ def removeoutliers(df, columns: list, **kwargs):
 		upperbound = kwargs['upperbound']
 		lowerbound = kwargs['lowerbound']
 		# For every row apply threshold using bounds and see whether all columns for each row satisfy the bounds
-		constraints = df.swifter.apply(lambda row: all([(cell < upperbound) and (cell > lowerbound) for cell in row[columns]]), axis=1)
+		constraints = df.apply(lambda row: all([(cell < upperbound) and (cell > lowerbound) for cell in row[columns]]), axis=1)
 		# Drop values set to be rejected
 		df = df.drop(df.index[~constraints], axis = 0)
 
