@@ -30,7 +30,7 @@ def deploy_control(*args, **kwargs):
 			meta_data_ = json.load(fp)
 		if not path.exists("experience.csv"):
 			with open('experience.csv', 'a+') as cfile:
-				cfile.write('{}, {}, {}, {}, {}, {}, {}, {}\n'.format('time', 'oat', 'oah', 'wbt',
+				cfile.write('{},{},{},{},{},{},{},{}\n'.format('time', 'oat', 'oah', 'wbt',
 				'avg_stpt', 'sat', 'rlstpt', 'hist_stpt'))
 			cfile.close()
 
