@@ -17,7 +17,7 @@ with warnings.catch_warnings():
 	from stable_baselines.results_plotter import ts2xy
 
 # current best mean reward
-best_mean_reward = 100.0  # -np.inf
+best_mean_reward = -np.inf
 #steps completed
 total_time_steps = 0
 
@@ -55,7 +55,7 @@ def train_agent(agent, env=None, steps=30000, tb_log_name = "../log/ppo2_event_f
 	"""
 
 	global best_mean_reward
-	best_mean_reward = 100.0
+	best_mean_reward = -np.inf
 
 	if env is not None:
 		agent.set_env(env)
