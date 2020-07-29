@@ -62,7 +62,7 @@ def offline_batch_data_clean(*args, **kwargs):
 	df = kwargs['df'].copy()
 	cols = df.columns
 
-	retain = False
+	retain = True
 	if retain:
 		# for col_name in df.columns:
 		# 	#df.loc[faulty_idx[col_name], col_name] = stats.loc['mean', col_name]  # set to mean
