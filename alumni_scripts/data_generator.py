@@ -157,7 +157,7 @@ def data_gen_process_cwe(*args, **kwargs):
 	df = a_utils.df2operating_regions(df, ['cwe'], 0.0)
 
 	# determine split point for last 1 week test data
-	t_train_end = df.index[-1] - timedelta(days=7)
+	t_train_end = df.index[-1] - timedelta(hours=3)
 	test_df = df.loc[t_train_end : , : ]
 	splitvalue = test_df.shape[0]
 
@@ -203,7 +203,7 @@ def data_gen_process_hwe(*args, **kwargs):
 	df = a_utils.dropNaNrows(df)
 
 	# Sample the data at period intervals
-	df = a_utils.sample_timeseries_df(df, period=6)
+	df = a_utils.sample_timeseries_df(df, period=3)
 
 	# scale the columns: here we will use min-max
 	df[df.columns] = kwargs['scaler'].minmax_scale(df, df.columns, df.columns)
@@ -215,7 +215,7 @@ def data_gen_process_hwe(*args, **kwargs):
 	df = a_utils.df2operating_regions(df, ['hwe'], 0.0)
 
 	# determine split point for last 1 week test data
-	t_train_end = df.index[-1] - timedelta(days=7)
+	t_train_end = df.index[-1] - timedelta(hours=3)
 	test_df = df.loc[t_train_end : , : ]
 	splitvalue = test_df.shape[0]
 
@@ -285,7 +285,7 @@ def data_gen_process_vlv(*args, **kwargs):
 
 
 	# determine split point for last 1 week test data
-	t_train_end = df.index[-1] - timedelta(days=7)
+	t_train_end = df.index[-1] - timedelta(hours=3)
 	test_df = df.loc[t_train_end : , : ]
 	splitvalue = test_df.shape[0]
 

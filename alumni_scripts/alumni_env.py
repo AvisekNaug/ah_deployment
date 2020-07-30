@@ -106,7 +106,7 @@ class Env(gym.Env):
 		self.dataptr = 0
 		# Steps for specifying train and test data indices
 
-		test_start = df.index[-1]-timedelta(days=7)
+		test_start = df.index[-1]-timedelta(hours=3)
 		test_end = df.index[-1]
 		self.df_t = df.loc[test_start:test_end,:]
 		self.train_data_limit = self.nrows - self.df_t.shape[0]

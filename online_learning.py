@@ -57,13 +57,13 @@ if __name__ == "__main__":
 		# how to set relearning interval
 		relearn_interval_kwargs = {'days':0, 'hours':6, 'minutes':0, 'seconds':0}
 		# weeks to look back into for retraining
-		retrain_range_weeks = 4
+		retrain_range_weeks = 1
 		# number of epochs to train dynamic models
 		epochs = 900000
-		# num of steps to learn rl in each train method
-		rl_train_steps = 30000
 		# period of data
 		period = 6 # 1 = 5 mins, 6 = 30 mins
+		# num of steps to learn rl in each train method
+		rl_train_steps = int((60/(period*5))*24*7*retrain_range_weeks*15)
 		# reinitialize agent at the end of every learning iteration
 		reinit_agent = True
 
