@@ -26,7 +26,7 @@ from alumni_scripts import data_process as dp
 from CoolProp.HumidAirProp import HAPropsSI
 import logging
 sys.path.append(os.path.abspath(os.path.join('..')))
-
+import time
 import multiprocessing
 import psutil
 
@@ -517,7 +517,17 @@ def get_train_data(api_args, meta_data_, retrain_range_weeks, log):
 			log.info('OnlineDataGen: BdX API could not get train data: will resuse old data')
 
 		# get the dataframe from a csv
-		df_ = read_csv('data/trend_data/alumni_data_train.csv', )
+		while True:
+			if not os.path.exists('data/trend_data/alumni_data_train_wbt.csv'):
+				log.info('OnlineDataGen: Start of Wet Bulb Data Calculation; wait 40 s')
+				time.sleep(timedelta(seconds=40).seconds)
+			else:
+				log.info('OnlineDataGen: Wet Bulb Data Calculation is almost done, wait 40 s')
+				time.sleep(timedelta(seconds=40).seconds) # give some time to finish writing
+				break
+
+		df_ = read_csv('data/trend_data/alumni_data_train_wbt.csv', )
+		os.remove('data/trend_data/alumni_data_train_wbt.csv')
 		df_['time'] = to_datetime(df_['time'])
 		to_zone = tz.tzlocal()
 		df_['time'] = df_['time'].apply(lambda x: x.astimezone(to_zone)) # convert time to loca timezones
@@ -525,25 +535,26 @@ def get_train_data(api_args, meta_data_, retrain_range_weeks, log):
 		df_ = a_utils.dropNaNrows(df_)
 
 		# add wet bulb temperature to the data
-		log.info('OnlineDataGen: Start of Wet Bulb Data Calculation')
-		rh = df_['WeatherDataProfile humidity']/100
-		rh = rh.to_numpy()
-		t_db = 5*(df_['AHU_1 outdoorAirTemp']-32)/9 + 273.15
-		t_db = t_db.to_numpy()
-		tdb_rh = np.concatenate((t_db.reshape(-1,1), rh.reshape(-1,1)), axis=1)
-		chunks = [ (sub_arr[:, 0].flatten(), sub_arr[:, 1].flatten(), cpu_id)
-					for cpu_id, sub_arr in enumerate(np.array_split(tdb_rh, multiprocessing.cpu_count(), axis=0))]
-		pool = multiprocessing.Pool()
-		individual_results = pool.map(calculate_wbt, chunks)
-		# Freeing the workers:
-		pool.close()
-		pool.join()
-		T = np.concatenate(individual_results)
+		#log.info('OnlineDataGen: Start of Wet Bulb Data Calculation')
+		#rh = df_['WeatherDataProfile humidity']/100
+		#rh = rh.to_numpy()
+		#t_db = 5*(df_['AHU_1 outdoorAirTemp']-32)/9 + 273.15
+		#t_db = t_db.to_numpy()
 
-		# T = HAPropsSI('T_wb','R',rh,'T',t_db,'P',101325)
-		t_f = 9*(T-273.15)/5 + 32
-		df_['wbt'] = t_f
-		log.info('OnlineDataGen: Wet Bulb Data Calculated')
+		# tdb_rh = np.concatenate((t_db.reshape(-1,1), rh.reshape(-1,1)), axis=1)
+		# chunks = [ (sub_arr[:, 0].flatten(), sub_arr[:, 1].flatten(), cpu_id)
+		# 			for cpu_id, sub_arr in enumerate(np.array_split(tdb_rh, multiprocessing.cpu_count(), axis=0))]
+		# pool = multiprocessing.Pool()
+		# individual_results = pool.map(calculate_wbt, chunks)
+		# # Freeing the workers:
+		# pool.close()
+		# pool.join()
+		# T = np.concatenate(individual_results)
+
+		#T = HAPropsSI('T_wb','R',rh,'T',t_db,'P',101325)
+		#t_f = 9*(T-273.15)/5 + 32
+		#df_['wbt'] = t_f
+		# log.info('OnlineDataGen: Wet Bulb Data Calculated')
 
 		# rename the columns
 		new_names = []
