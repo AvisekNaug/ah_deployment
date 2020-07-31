@@ -199,8 +199,8 @@ class Env(gym.Env):
 		cwe_rl_energy, hwe_rl_energy = self.energy_cost(s, a)
 		# historical energy for this time step
 		cwe_hist_energy, hwe_hist_energy = self.energy_cost(s, self.hist_a)
-		rl_energy = hwe_rl_energy #+ cwe_rl_energy
-		hist_energy = hwe_hist_energy #+  cwe_hist_energy
+		rl_energy = hwe_rl_energy + cwe_rl_energy
+		hist_energy = hwe_hist_energy +  cwe_hist_energy
 
 		# 'energy_saved' reward if at least 'energy_savings_thresh' energy saved else 'energy_penalty' reward
 		reward_energy = self.params['energy_saved']*(hist_energy-rl_energy) \

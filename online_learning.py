@@ -55,15 +55,19 @@ if __name__ == "__main__":
 		# interval num for relearning : look at logs/Interval{} and write next number to prevent overwrite
 		interval = 1
 		# how to set relearning interval
-		relearn_interval_kwargs = {'days':0, 'hours':24, 'minutes':0, 'seconds':0}
+		relearn_interval_kwargs = {'days':0, 'hours':6, 'minutes':0, 'seconds':0}
 		# weeks to look back into for retraining
-		retrain_range_weeks = 4
+		retrain_range_weeks = 18
+		# weeks to train rl on 
+		retrain_range_rl_weeks = 2
+		# use validation loss in lstm or not
+		use_val = False
 		# number of epochs to train dynamic models
 		epochs = 900000
 		# period of data
 		period = 6 # 1 = 5 mins, 6 = 30 mins
 		# num of steps to learn rl in each train method
-		rl_train_steps = int((60/(period*5))*24*7*retrain_range_weeks*30)
+		rl_train_steps = int((60/(period*5))*24*7*retrain_range_rl_weeks*35)
 		# reinitialize agent at the end of every learning iteration
 		reinit_agent = True
 
@@ -103,7 +107,7 @@ if __name__ == "__main__":
 			'model_type': 'regresion', 'train_batchsize' : 32,
 			'input_timesteps': 1, 'input_dim': 4, 'timegap': 6,
 			'dense_layers' : 4, 'dense_units': 8, 'activation_dense' : 'relu',
-			'lstm_layers' : 4, 'lstm_units': 8, 'activation_lstm' : 'relu',
+			'lstm_layers' : 6, 'lstm_units': 8, 'activation_lstm' : 'relu',
 			'save_path': cwe_data, 'model_path': model_path, 'name': 'cwe', 'epochs' : epochs
 		}
 		cwe_vars = ['pchw_flow', 'oah', 'wbt',  'sat', 'oat', 'cwe']
@@ -112,7 +116,7 @@ if __name__ == "__main__":
 			'model_type': 'regresion', 'train_batchsize' : 32,
 			'input_timesteps': 1, 'input_dim': 4, 'timegap': 6,
 			'dense_layers' : 4, 'dense_units': 8, 'activation_dense' : 'relu',
-			'lstm_layers' : 4, 'lstm_units': 8, 'activation_lstm' : 'relu',
+			'lstm_layers' : 6, 'lstm_units': 8, 'activation_lstm' : 'relu',
 			'save_path': hwe_data, 'model_path': model_path, 'name': 'hwe', 'epochs' : epochs
 		}
 		hwe_vars = ['oat', 'oah', 'wbt', 'sat', 'hwe']
@@ -121,7 +125,7 @@ if __name__ == "__main__":
 			'model_type': 'classification', 'train_batchsize' : 32,
 			'input_timesteps': 1, 'input_dim': 4, 'timegap': 6,
 			'dense_layers' : 4, 'dense_units': 8, 'activation_dense' : 'relu',
-			'lstm_layers' : 4, 'lstm_units': 8, 'activation_lstm' : 'relu',
+			'lstm_layers' : 6, 'lstm_units': 8, 'activation_lstm' : 'relu',
 			'save_path': vlv_data, 'model_path': model_path, 'name': 'vlv', 'epochs' : epochs
 		}
 		vlv_vars = ['oat', 'oah', 'wbt', 'sat', 'hwe']
@@ -176,6 +180,7 @@ if __name__ == "__main__":
 									'lstm_train_data_lock':lstm_train_data_lock,
 									'relearn_interval_kwargs':relearn_interval_kwargs,
 									'retrain_range_weeks':retrain_range_weeks,
+									'retrain_range_rl_weeks':retrain_range_rl_weeks,
 									'env_data_available':env_data_available,
 									'env_train_data_lock':env_train_data_lock,
 									'agg' : agg,
@@ -199,7 +204,8 @@ if __name__ == "__main__":
 									'hwe_model_config':exp_params['hwe_model_config'],
 									'vlv_model_config':exp_params['vlv_model_config'],
 									'save_path': save_path,
-									'logger':log,})
+									'logger':log,
+									'use_val':use_val})
 		model_learn_th.start()
 
 		ctrl_learn_th = Thread(target=ctlearn.controller_learn, daemon = False,

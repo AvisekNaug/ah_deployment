@@ -28,19 +28,24 @@ def data_driven_model_learn(*args, **kwargs):
 		models_created = False
 		eval_interval = 1
 		# to_break = False
+		# user validation loss or not
+		if kwargs['use_val']:
+			cwe_type,hwe_type,vlv_type  = dm.nn_model, dm.nn_model, dm.nn_model
+		else:
+			cwe_type,hwe_type,vlv_type  = dm.no_val_nn_model, dm.no_val_nn_model, dm.no_val_nn_model
 
 		# Read the processed data and learn the 3 models inside a conditional loop
 		while (not end_learning.is_set()) | (lstm_data_available.is_set()):
 
 			if not models_created:  # create the 3 models needed for training
 
-				cwe_model = dm.nn_model(**kwargs['cwe_model_config'])
+				cwe_model = cwe_type(**kwargs['cwe_model_config'])
 				cwe_model.design(**kwargs['cwe_model_config'])
 				cwe_model.compile()
-				hwe_model = dm.nn_model(**kwargs['hwe_model_config'])
+				hwe_model = hwe_type(**kwargs['hwe_model_config'])
 				hwe_model.design(**kwargs['hwe_model_config'])
 				hwe_model.compile()
-				vlv_model = dm.nn_model(**kwargs['vlv_model_config'])
+				vlv_model = vlv_type(**kwargs['vlv_model_config'])
 				vlv_model.design(**kwargs['vlv_model_config'])
 				vlv_model.compile()
 				log.info("Dynamic Model Learning Module: Models Initialized")

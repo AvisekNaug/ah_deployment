@@ -28,6 +28,7 @@ import logging
 sys.path.append(os.path.abspath(os.path.join('..')))
 
 import multiprocessing
+import psutil
 
 
 def offline_data_gen(*args, **kwargs):
@@ -530,8 +531,8 @@ def get_train_data(api_args, meta_data_, retrain_range_weeks, log):
 		t_db = 5*(df_['AHU_1 outdoorAirTemp']-32)/9 + 273.15
 		t_db = t_db.to_numpy()
 		tdb_rh = np.concatenate((t_db.reshape(-1,1), rh.reshape(-1,1)), axis=1)
-		chunks = [ (sub_arr[:, 0].flatten(), sub_arr[:, 1].flatten())
-					for sub_arr in np.array_split(tdb_rh, multiprocessing.cpu_count(), axis=0)]
+		chunks = [ (sub_arr[:, 0].flatten(), sub_arr[:, 1].flatten(), cpu_id)
+					for cpu_id, sub_arr in enumerate(np.array_split(tdb_rh, multiprocessing.cpu_count(), axis=0))]
 		pool = multiprocessing.Pool()
 		individual_results = pool.map(calculate_wbt, chunks)
 		# Freeing the workers:
@@ -563,6 +564,8 @@ def get_train_data(api_args, meta_data_, retrain_range_weeks, log):
 
 
 def calculate_wbt(all_args):
-    t_db, rh = all_args
-    T = HAPropsSI('T_wb','R',rh,'T',t_db,'P',101325)
-    return T
+	t_db, rh, cpu_id = all_args
+	proc = psutil.Process()
+	proc.cpu_affinity([cpu_id])
+	T = HAPropsSI('T_wb','R',rh,'T',t_db,'P',101325)
+	return T
