@@ -15,6 +15,8 @@ import json
 import numpy as np
 from pandas import read_csv, to_datetime
 from datetime import datetime, timedelta
+import pytz
+from dateutil import tz
 from threading import Thread
 from multiprocessing import Event, Lock
 from influxdb import DataFrameClient
@@ -157,7 +159,7 @@ def data_gen_process_cwe(*args, **kwargs):
 	df = a_utils.df2operating_regions(df, ['cwe'], 0.0)
 
 	# determine split point for last 1 week test data
-	t_train_end = df.index[-1] - timedelta(hours=3)
+	t_train_end = df.index[-1] - timedelta(hours=96)
 	test_df = df.loc[t_train_end : , : ]
 	splitvalue = test_df.shape[0]
 
@@ -203,7 +205,7 @@ def data_gen_process_hwe(*args, **kwargs):
 	df = a_utils.dropNaNrows(df)
 
 	# Sample the data at period intervals
-	df = a_utils.sample_timeseries_df(df, period=3)
+	df = a_utils.sample_timeseries_df(df, period=6)
 
 	# scale the columns: here we will use min-max
 	df[df.columns] = kwargs['scaler'].minmax_scale(df, df.columns, df.columns)
@@ -215,7 +217,7 @@ def data_gen_process_hwe(*args, **kwargs):
 	df = a_utils.df2operating_regions(df, ['hwe'], 0.0)
 
 	# determine split point for last 1 week test data
-	t_train_end = df.index[-1] - timedelta(hours=3)
+	t_train_end = df.index[-1] - timedelta(hours=96)
 	test_df = df.loc[t_train_end : , : ]
 	splitvalue = test_df.shape[0]
 
@@ -285,7 +287,7 @@ def data_gen_process_vlv(*args, **kwargs):
 
 
 	# determine split point for last 1 week test data
-	t_train_end = df.index[-1] - timedelta(hours=3)
+	t_train_end = df.index[-1] - timedelta(hours=96)
 	test_df = df.loc[t_train_end : , : ]
 	splitvalue = test_df.shape[0]
 
@@ -376,8 +378,8 @@ def online_data_gen(*args, **kwargs):
 		lstm_train_data_lock : Lock = kwargs['lstm_train_data_lock']  # prevent dataloop from writing data
 		env_train_data_lock : Lock = kwargs['env_train_data_lock']  # prevent dataloop from writing data  # pylint: disable=unused-variable
 
-		# relearn interval in date time format
-		relearn_interval_kwargs = kwargs['relearn_interval_kwargs']  # eg {'days':6, 'hours':23, 'minutes':50, 'seconds':0}
+		# relearn interval in date time format- first relearn happends fast
+		relearn_interval_kwargs = {'days':0, 'hours':0, 'minutes':0, 'seconds':0}  # eg {'days':6, 'hours':23, 'minutes':50, 'seconds':0}
 		# retrain range in weeks
 		retrain_range_weeks = kwargs['retrain_range_weeks']
 
@@ -397,6 +399,7 @@ def online_data_gen(*args, **kwargs):
 			data_unavailable = not (lstm_data_available.is_set() | env_data_available.is_set())
 			# condition 2 : interval satisfied -- set to True to be always satisifed
 			interval_completed = (datetime.now()-last_train_time) > timedelta(**relearn_interval_kwargs)
+			relearn_interval_kwargs = kwargs['relearn_interval_kwargs']
 			# condition 3 : some error is crossing a threshold -- set to True to be always satisifed
 			error_trigger = True
 			# condition 4 : some reward measure is crossing a threshold -- set to True to be always satisifed
@@ -490,7 +493,7 @@ def get_train_data(api_args, meta_data_, retrain_range_weeks, log):
 		time_args = {'trend_id' : '2681', 'save_path' : 'data/trend_data/alumni_data_train.csv'}
 		start_fields = ['start_'+i for i in ['year','month','day', 'hour', 'minute', 'second']]
 		end_fields = ['end_'+i for i in ['year','month','day', 'hour', 'minute', 'second']]
-		end_time = datetime.now()
+		end_time = datetime.now(tz=pytz.utc)
 		start_time = end_time - timedelta(weeks=retrain_range_weeks)
 		for idx, i in enumerate(start_fields):
 			time_args[i] = start_time.timetuple()[idx]
@@ -508,6 +511,8 @@ def get_train_data(api_args, meta_data_, retrain_range_weeks, log):
 		# get the dataframe from a csv
 		df_ = read_csv('data/trend_data/alumni_data_train.csv', )
 		df_['time'] = to_datetime(df_['time'])
+		to_zone = tz.tzlocal()
+		df_['time'] = df_['time'].apply(lambda x: x.astimezone(to_zone)) # convert time to loca timezones
 		df_.set_index(keys='time',inplace=True, drop = True)
 		df_ = a_utils.dropNaNrows(df_)
 
