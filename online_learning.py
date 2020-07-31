@@ -55,7 +55,7 @@ if __name__ == "__main__":
 		# interval num for relearning : look at logs/Interval{} and write next number to prevent overwrite
 		interval = 1
 		# how to set relearning interval
-		relearn_interval_kwargs = {'days':0, 'hours':3, 'minutes':0, 'seconds':0}
+		relearn_interval_kwargs = {'days':0, 'hours':24, 'minutes':0, 'seconds':0}
 		# weeks to look back into for retraining
 		retrain_range_weeks = 4
 		# number of epochs to train dynamic models
