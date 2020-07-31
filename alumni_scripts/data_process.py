@@ -20,7 +20,6 @@ from datetime import datetime, timezone, timedelta
 
 
 
-
 # acquire data using BdX API
 def pull_offline_data(*args, **kwargs):
 	"""
@@ -28,7 +27,7 @@ def pull_offline_data(*args, **kwargs):
 	"""
 
 	tz_utc = timezone(offset=-timedelta(hours=0))
-	tz_central = timezone(offset=-timedelta(hours=6))
+	# tz_central = timezone(offset=-timedelta(hours=6))
 
 	start = datetime(kwargs['start_year'], kwargs['start_month'], kwargs['start_day'], hour= kwargs['start_hour'],
 	 minute= kwargs['start_minute'], second= kwargs['start_second'], tzinfo=tz_utc)
@@ -89,7 +88,7 @@ def pull_online_data(*args, **kwargs):
 	"""
 
 	tz_utc = timezone(offset=-timedelta(hours=0))
-	tz_central = timezone(offset=-timedelta(hours=6))
+	# tz_central = timezone(offset=-timedelta(hours=6))
 
 	start = datetime(kwargs['start_year'], kwargs['start_month'], kwargs['start_day'], hour= kwargs['start_hour'],
 	 minute= kwargs['start_minute'], second= kwargs['start_second'], tzinfo=tz_utc)
