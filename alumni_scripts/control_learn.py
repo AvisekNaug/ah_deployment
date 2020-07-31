@@ -128,10 +128,10 @@ def controller_learn(*args, **kwargs):
 					# additional agent grahps in tf.Graph
 					agent.save(kwargs['env_config']['model_path'] + 'init_rl_agent')
 
-					if online_mode:
-						agent.load(best_rl_agent_path, env = env)
-						log.info("Control Learn Module: Agent Weights loaded from Offline Phase")
-						# online_mode = False
+					#if online_mode:
+					#	agent.load(best_rl_agent_path, env = env)
+					#	log.info("Control Learn Module: Agent Weights loaded from Offline Phase")
+					#	# online_mode = False
 					agent_created = True
 				# ** agent uses "monitor_log_dir" to update agent by looking at rewards
 				
