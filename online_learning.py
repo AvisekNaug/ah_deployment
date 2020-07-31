@@ -55,15 +55,15 @@ if __name__ == "__main__":
 		# interval num for relearning : look at logs/Interval{} and write next number to prevent overwrite
 		interval = 1
 		# how to set relearning interval
-		relearn_interval_kwargs = {'days':0, 'hours':6, 'minutes':0, 'seconds':0}
+		relearn_interval_kwargs = {'days':0, 'hours':3, 'minutes':0, 'seconds':0}
 		# weeks to look back into for retraining
-		retrain_range_weeks = 1
+		retrain_range_weeks = 4
 		# number of epochs to train dynamic models
 		epochs = 900000
 		# period of data
 		period = 6 # 1 = 5 mins, 6 = 30 mins
 		# num of steps to learn rl in each train method
-		rl_train_steps = int((60/(period*5))*24*7*retrain_range_weeks*15)
+		rl_train_steps = int((60/(period*5))*24*7*retrain_range_weeks*30)
 		# reinitialize agent at the end of every learning iteration
 		reinit_agent = True
 
@@ -141,7 +141,7 @@ if __name__ == "__main__":
 		env_data_available = Event()  # new data available for alumni env rl learning
 		lstm_weights_available = Event()  # trained lstm models are avilable
 		agent_model_available = Event()  # trained controller weights are availalbe for "online" deployment
-		lstm_weights_available.set()  # for online previous weights are available
+		# lstm_weights_available.set()  # for online previous weights are available
 		agent_weights_available = Event()  # agent weights are available to be read by deploy loop
 		agent_weights_available.set() # set agent weights to available in online learning as it
 		# will be immediately deployed
