@@ -27,6 +27,7 @@ from CoolProp.HumidAirProp import HAPropsSI
 import logging
 sys.path.append(os.path.abspath(os.path.join('..')))
 
+import multiprocessing
 
 
 def offline_data_gen(*args, **kwargs):
@@ -159,7 +160,7 @@ def data_gen_process_cwe(*args, **kwargs):
 	df = a_utils.df2operating_regions(df, ['cwe'], 0.0)
 
 	# determine split point for last 1 week test data
-	t_train_end = df.index[-1] - timedelta(hours=96)
+	t_train_end = df.index[-1] - timedelta(hours=2)
 	test_df = df.loc[t_train_end : , : ]
 	splitvalue = test_df.shape[0]
 
@@ -217,7 +218,7 @@ def data_gen_process_hwe(*args, **kwargs):
 	df = a_utils.df2operating_regions(df, ['hwe'], 0.0)
 
 	# determine split point for last 1 week test data
-	t_train_end = df.index[-1] - timedelta(hours=96)
+	t_train_end = df.index[-1] - timedelta(hours=2)
 	test_df = df.loc[t_train_end : , : ]
 	splitvalue = test_df.shape[0]
 
@@ -287,7 +288,7 @@ def data_gen_process_vlv(*args, **kwargs):
 
 
 	# determine split point for last 1 week test data
-	t_train_end = df.index[-1] - timedelta(hours=96)
+	t_train_end = df.index[-1] - timedelta(hours=2)
 	test_df = df.loc[t_train_end : , : ]
 	splitvalue = test_df.shape[0]
 
@@ -353,6 +354,10 @@ def data_gen_process_env(*args, **kwargs):
 	# drop individual set point cols
 	df.drop( columns = stpt_cols, inplace = True)
 
+	# select retrain range of the data
+	time_start_of_train = df.index[-1]-timedelta(weeks=kwargs['retrain_range_rl_weeks'])
+	df = df.loc[time_start_of_train : , :]
+
 	# save the data frame
 	df.to_pickle(kwargs['save_path']+'env_data/env_data.pkl')
 
@@ -382,6 +387,8 @@ def online_data_gen(*args, **kwargs):
 		relearn_interval_kwargs = {'days':0, 'hours':0, 'minutes':0, 'seconds':0}  # eg {'days':6, 'hours':23, 'minutes':50, 'seconds':0}
 		# retrain range in weeks
 		retrain_range_weeks = kwargs['retrain_range_weeks']
+		# rl retrain weeks
+		retrain_range_rl_weeks = kwargs['retrain_range_rl_weeks']
 
 		# time at which this method started: used for book triggering relearn loop
 		last_train_time = datetime.now()
@@ -437,7 +444,7 @@ def online_data_gen(*args, **kwargs):
 											kwargs={
 											'df' : df,
 											'agg': kwargs['agg'], 'scaler': kwargs['scaler'],
-											'save_path':kwargs['save_path']
+											'save_path':kwargs['save_path'], 'retrain_range_rl_weeks':retrain_range_rl_weeks
 											})
 				with lstm_train_data_lock:
 					data_gen_process_cwe_th.start()
@@ -522,7 +529,17 @@ def get_train_data(api_args, meta_data_, retrain_range_weeks, log):
 		rh = rh.to_numpy()
 		t_db = 5*(df_['AHU_1 outdoorAirTemp']-32)/9 + 273.15
 		t_db = t_db.to_numpy()
-		T = HAPropsSI('T_wb','R',rh,'T',t_db,'P',101325)
+		tdb_rh = np.concatenate((t_db.reshape(-1,1), rh.reshape(-1,1)), axis=1)
+		chunks = [ (sub_arr[:, 0].flatten(), sub_arr[:, 1].flatten())
+					for sub_arr in np.array_split(tdb_rh, multiprocessing.cpu_count(), axis=0)]
+		pool = multiprocessing.Pool()
+		individual_results = pool.map(calculate_wbt, chunks)
+		# Freeing the workers:
+		pool.close()
+		pool.join()
+		T = np.concatenate(individual_results)
+
+		# T = HAPropsSI('T_wb','R',rh,'T',t_db,'P',101325)
 		t_f = 9*(T-273.15)/5 + 32
 		df_['wbt'] = t_f
 		log.info('OnlineDataGen: Wet Bulb Data Calculated')
@@ -543,4 +560,9 @@ def get_train_data(api_args, meta_data_, retrain_range_weeks, log):
 	except Exception as e:
 		log.error('Date Generator Get Online Train Data Module: %s', str(e))
 		log.debug(e, exc_info=True)
-	
+
+
+def calculate_wbt(all_args):
+    t_db, rh = all_args
+    T = HAPropsSI('T_wb','R',rh,'T',t_db,'P',101325)
+    return T
