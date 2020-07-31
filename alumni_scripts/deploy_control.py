@@ -9,6 +9,8 @@ import json
 from datetime import datetime, timedelta
 from multiprocessing import Event, Lock
 import time
+import pytz
+from dateutil import tz
 
 import warnings
 with warnings.catch_warnings():
@@ -123,8 +125,8 @@ def get_real_obs(api_args: dict, meta_data_: dict, obs_space_vars : list, scaler
 		time_args = {'trend_id' : '2681', 'save_path' : 'data/trend_data/alumni_data_deployment.csv'}
 		start_fields = ['start_'+i for i in ['year','month','day', 'hour', 'minute', 'second']]
 		end_fields = ['end_'+i for i in ['year','month','day', 'hour', 'minute', 'second']]
-		end_time = datetime.now()
-		time_gap_minutes = int(period*5)
+		end_time = datetime.now(tz=pytz.utc)
+		time_gap_minutes = int((period+3)*5)
 		start_time = end_time - timedelta(minutes=time_gap_minutes)
 		for idx, i in enumerate(start_fields):
 			time_args[i] = start_time.timetuple()[idx]
@@ -142,6 +144,8 @@ def get_real_obs(api_args: dict, meta_data_: dict, obs_space_vars : list, scaler
 		# get the dataframe from a csv
 		df_ = read_csv('data/trend_data/alumni_data_deployment.csv', )
 		df_['time'] = to_datetime(df_['time'])
+		to_zone = tz.tzlocal()
+		df_['time'] = df_['time'].apply(lambda x: x.astimezone(to_zone)) # convert time to loca timezones
 		df_.set_index(keys='time',inplace=True, drop = True)
 		df_ = a_utils.dropNaNrows(df_)
 
