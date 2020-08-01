@@ -234,14 +234,21 @@ class no_val_nn_model(datadrivenmodel):
 			with self.session.as_default():  # pylint: disable=not-context-manager
 				input_layer = Input(batch_shape=(None, self.input_timesteps, self.input_dim), name = kwargs['name']+'_input')
 				layers = input_layer
-				# for i in range(dense_layers):
-				# 	layers = Dense(dense_units, activation=activation_dense, name=kwargs['name']+'_dense'+str(i))(layers)
+
 				for i in range(lstm_layers-1):
 					layers = LSTM(lstm_units, activation=activation_lstm, return_sequences=True,
 					 name=kwargs['name']+'_lstm'+str(i))(layers)
-				output = LSTM(self.outputdim, activation=self.last_activation, return_sequences=False,
+
+				layers = LSTM(lstm_units, activation=activation_lstm, return_sequences=False,
 					 name=kwargs['name']+'_lstm'+str(i+1))(layers)
-				output = Reshape((1,self.outputdim), name = kwargs['name']+'_reshape')(output)
+
+				for j in range(dense_layers-1):
+					layers = Dense(dense_units, activation=activation_dense, name=kwargs['name']+'_dense'+str(j))(layers)
+				
+				layers = Dense(self.outputdim, activation=self.last_activation, name=kwargs['name']+'_dense'+str(j+1))(layers)
+
+				output = Reshape((1, self.outputdim), name = kwargs['name']+'_reshape')(layers)
+				
 				self.model = Model(inputs=input_layer, outputs=output)
 
 

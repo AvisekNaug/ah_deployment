@@ -104,7 +104,7 @@ if __name__ == "__main__":
 		utils.make_dirs(trend_data)
 
 		exp_params['cwe_model_config'] = {
-			'model_type': 'regresion', 'train_batchsize' : 32,
+			'model_type': 'regresion', 'train_batchsize' : 16,
 			'input_timesteps': 1, 'input_dim': 4, 'timegap': 6,
 			'dense_layers' : 4, 'dense_units': 8, 'activation_dense' : 'relu',
 			'lstm_layers' : 6, 'lstm_units': 8, 'activation_lstm' : 'relu',
@@ -113,7 +113,7 @@ if __name__ == "__main__":
 		cwe_vars = ['pchw_flow', 'oah', 'wbt',  'sat', 'oat', 'cwe']
 
 		exp_params['hwe_model_config'] = {
-			'model_type': 'regresion', 'train_batchsize' : 32,
+			'model_type': 'regresion', 'train_batchsize' : 16,
 			'input_timesteps': 1, 'input_dim': 4, 'timegap': 6,
 			'dense_layers' : 4, 'dense_units': 8, 'activation_dense' : 'relu',
 			'lstm_layers' : 6, 'lstm_units': 8, 'activation_lstm' : 'relu',
@@ -122,7 +122,7 @@ if __name__ == "__main__":
 		hwe_vars = ['oat', 'oah', 'wbt', 'sat', 'hwe']
 		
 		exp_params['vlv_model_config'] = {
-			'model_type': 'classification', 'train_batchsize' : 32,
+			'model_type': 'classification', 'train_batchsize' : 16,
 			'input_timesteps': 1, 'input_dim': 4, 'timegap': 6,
 			'dense_layers' : 4, 'dense_units': 8, 'activation_dense' : 'relu',
 			'lstm_layers' : 6, 'lstm_units': 8, 'activation_lstm' : 'relu',
