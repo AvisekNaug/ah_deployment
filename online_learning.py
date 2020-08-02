@@ -67,7 +67,7 @@ if __name__ == "__main__":
 		# period of data
 		period = 6 # 1 = 5 mins, 6 = 30 mins
 		# num of steps to learn rl in each train method
-		rl_train_steps = int((60/(period*5))*24*7*retrain_range_rl_weeks*35)
+		rl_train_steps = int((60/(period*5))*24*7*retrain_range_rl_weeks*45)
 		# reinitialize agent at the end of every learning iteration
 		reinit_agent = True
 
