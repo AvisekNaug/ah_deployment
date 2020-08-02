@@ -158,7 +158,7 @@ def data_gen_process_cwe(*args, **kwargs):
 	df['sat-oat'] = df['sat'] - df['oat']
 
 	# select non-zero operating regions
-	df = a_utils.df2operating_regions(df, ['cwe'], 0.0)
+	df = a_utils.df2operating_regions(df, ['cwe', 'pchw_flow'], [0.001, 0.001])
 
 	# determine split point for last 1 week test data
 	t_train_end = df.index[-1] - timedelta(hours=2)
@@ -216,7 +216,7 @@ def data_gen_process_hwe(*args, **kwargs):
 	df['sat-oat'] = df['sat'] - df['oat']
 
 	# select non-zero operating regions
-	df = a_utils.df2operating_regions(df, ['hwe'], 0.0)
+	df = a_utils.df2operating_regions(df, ['hwe'], [0.001])
 
 	# determine split point for last 1 week test data
 	t_train_end = df.index[-1] - timedelta(hours=2)
@@ -285,7 +285,7 @@ def data_gen_process_vlv(*args, **kwargs):
 
 	# add binary classification column
 	df['vlv'] = 1.0
-	df.loc[df['hwe']<= 0.0, ['vlv']] = 0
+	df.loc[df['hwe']<= 0.001, ['vlv']] = 0
 
 
 	# determine split point for last 1 week test data
