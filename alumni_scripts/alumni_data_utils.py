@@ -607,7 +607,7 @@ def df2operating_regions(df, column_names, thresholds):
     
     # select cells to be retained
     constraints = df.apply(
-        lambda row: all([(cell > thresholds) for cell in row[column_names]]),
+        lambda row: all([(cell > threshold) for cell, threshold in zip(row[column_names], thresholds)]),
         axis=1)
     # Drop values set to be rejected
     df = df.drop(df.index[~constraints], axis = 0)
