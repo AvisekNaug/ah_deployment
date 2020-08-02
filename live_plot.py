@@ -49,11 +49,19 @@ def update_graph_scatter(_):
             y=list(df['hist_stpt'].to_numpy().flatten()),
             name='Rule Based AHU1 Set Point',
             mode= 'lines+markers')
+    data5 = go.Scatter(x=list(df['time'].to_numpy().flatten()),
+            y=list(df['oah'].to_numpy().flatten()),
+            name='Outside Air Humidity',
+            mode= 'lines+markers')
+    data6 = go.Scatter(x=list(df['time'].to_numpy().flatten()),
+            y=list(df['wbt'].to_numpy().flatten()),
+            name='Wet Bulb Temperature',
+            mode= 'lines+markers')
     
-    myfigure = go.Figure(data = [data1, data2, data3, data4], 
+    myfigure = go.Figure(data = [data1, data2, data3, data4, data5, data6], 
                         layout=go.Layout(
-                                    yaxis = {'range':[50,95], 'title' : 'Temperature(F)',
-                                    'color' : 'black', },
+                                    yaxis = {'title' : 'Temperature(F) and Relative Humidity',
+                                    'color' : 'black', }, autosize = True,
                                     title = {'text' : 'Demo of PPO RL Controller applied to Alumni Hall AHU',
                                              'font' : {'color' : 'black', 'size' : 24, 'family' : "Times New Roman"}},
                                     hovermode='x'
