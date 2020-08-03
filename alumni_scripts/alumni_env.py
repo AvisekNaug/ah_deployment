@@ -208,7 +208,7 @@ class Env(gym.Env):
 			else self.params['energy_penalty']*(-hist_energy+rl_energy)
 		# reward_energy = hist_energy-rl_energy
 		# reward_energy *= self.params['energy_reward_weight']  # don't weight it so that we can try ad hoc weights
-		reward_energy /= 0.02*self.episode_length  # scale reward in case the episode lengths are not equal
+		reward_energy /= 0.01*self.episode_length  # scale reward in case the episode lengths are not equal
 
 		'''Comfort Reward'''
 		# exrtact rl discharge air temeprature
@@ -223,9 +223,18 @@ class Env(gym.Env):
 		# reward_comfort *= self.params['comfort_reward_weight']  # don't weight it so that we can try ad hoc weights
 		reward_comfort /= 0.01*self.episode_length  # scale reward in case the episode lengths are not equal
 
+		'''Reward for less heating during higher temperatures'''
+		oat_t = s.loc[s.index[0], 'oat']
+		if (oat_t>0.58):  # warm weather > 68F
+			reward_heating = -100.0*T_rl_disch
+		else:
+			reward_heating = -10*T_rl_disch
+		reward_heating /= 0.01*self.episode_length
+
 		# TODO: Create error component
 
-		reward = self.params['energy_reward_weight']*reward_energy + self.params['comfort_reward_weight']*reward_comfort
+		reward = self.params['energy_reward_weight']*reward_energy + self.params['comfort_reward_weight']*reward_comfort \
+			+ self.params['heating_reward_weight']*reward_heating
 
 		if self.testing:
 			step_info = {'datetime': str(s.index[0]),
@@ -235,6 +244,7 @@ class Env(gym.Env):
 						'hist_hwe':hwe_hist_energy,
 						'reward_energy': reward_energy,
 						'reward_comfort': reward_comfort,
+						'reward_heating':reward_heating,
 						'oat': s.loc[s.index[0], 'oat'],
 						'oah': s.loc[s.index[0], 'oah'],
 						'wbt': s.loc[s.index[0], 'wbt'],
