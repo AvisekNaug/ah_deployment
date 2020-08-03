@@ -40,12 +40,17 @@ This repo is used to deploy a reinforcement learning controller on the Alumni Ha
 	$ source alumni_v2/bin/activate
 	```
 
-1. Launching online learning script
+1. Launching online learning script(Mandatory)
 	```bash
 	$ python online_learning.py
 	```
 
-2. **In case** you want to run the production facing server to visualize a live Dashboard, open a new terminal and execute the following
+2. Start the script which calculates the wet bulb temperature in a seperate shell(Mandatory)
+	```bash
+	$ python wbt_calculator.py
+	```
+Step 3 is not needed for Alumni Deployment
+3. **In case** you want to run the production facing server to visualize a live Dashboard, open a new terminal and execute the following
 	```bash
 	$ waitress-serve --host <server ip address> --port <port to run> live_plot:app.server
 	```
