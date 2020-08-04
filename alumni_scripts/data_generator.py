@@ -161,24 +161,24 @@ def data_gen_process_cwe(*args, **kwargs):
 	df = a_utils.df2operating_regions(df, ['cwe', 'pchw_flow'], [0.001, 0.001])
 
 	# determine split point for last 1 week test data
-	t_train_end = df.index[-1] - timedelta(hours=2)
+	t_train_end = df.index[-1] - timedelta(weeks=6)
 	test_df = df.loc[t_train_end : , : ]
 	splitvalue = test_df.shape[0]
 
 	# create train and test/validate data
-	X_train, X_test, y_train, y_test = a_utils.df_2_arrays(df = df,
+	X_test, X_train, y_test, y_train = a_utils.df_2_arrays(df = df,
 		predictorcols = ['sat-oat', 'oah', 'wbt', 'pchw_flow'], outputcols = ['cwe'], lag = 0,
 		scaling = False, scaler = None, scaleX = True, scaleY = True,
 		split=splitvalue, shuffle=False,
 		reshaping=True, input_timesteps=1, output_timesteps = 1,)
 
 	# save test ids for later plots
-	idx_end = -max(X_test.shape[1],y_test.shape[1])
-	idx_start = idx_end - X_test.shape[0] + 1
-	test_idx = df.index[[ i for i in range(idx_start, idx_end+1, 1) ]]
-	test_info = {'test_idx' : [str(i) for i in test_idx], 'year_num': kwargs['year_num'], 'week_num':kwargs['week_num'] }
-	with open(kwargs['save_path']+'cwe_data/cwe_test_info.txt', 'a') as ifile:
-		ifile.write(json.dumps(test_info)+'\n')      
+	# idx_end = -max(X_test.shape[1],y_test.shape[1])
+	# idx_start = idx_end - X_test.shape[0] + 1
+	# test_idx = df.index[[ i for i in range(idx_start, idx_end+1, 1) ]]
+	# test_info = {'test_idx' : [str(i) for i in test_idx], 'year_num': kwargs['year_num'], 'week_num':kwargs['week_num'] }
+	# with open(kwargs['save_path']+'cwe_data/cwe_test_info.txt', 'a') as ifile:
+	# 	ifile.write(json.dumps(test_info)+'\n')      
 
 	np.save(kwargs['save_path']+'cwe_data/cwe_X_train.npy', X_train)
 	np.save(kwargs['save_path']+'cwe_data/cwe_X_val.npy', X_test)
@@ -219,12 +219,12 @@ def data_gen_process_hwe(*args, **kwargs):
 	df = a_utils.df2operating_regions(df, ['hwe'], [0.001])
 
 	# determine split point for last 1 week test data
-	t_train_end = df.index[-1] - timedelta(hours=2)
+	t_train_end = df.index[-1] - timedelta(weeks=13)
 	test_df = df.loc[t_train_end : , : ]
 	splitvalue = test_df.shape[0]
 
 	# create train and test/validate data
-	X_train, X_test, y_train, y_test = a_utils.df_2_arrays(df = df,
+	X_test, X_train, y_test, y_train = a_utils.df_2_arrays(df = df,
 		predictorcols = ['oat', 'oah', 'wbt', 'sat-oat'], outputcols = ['hwe'], lag = 0,
 		scaling = False, scaler = None, scaleX = True, scaleY = True,
 		split=splitvalue, shuffle=False,
@@ -232,12 +232,12 @@ def data_gen_process_hwe(*args, **kwargs):
 
 
 	# save test ids for later plots
-	idx_end = -max(X_test.shape[1],y_test.shape[1])
-	idx_start = idx_end - X_test.shape[0] + 1
-	test_idx = df.index[[ i for i in range(idx_start, idx_end+1, 1) ]]
-	test_info = {'test_idx' : [str(i) for i in test_idx], 'year_num': kwargs['year_num'], 'week_num':kwargs['week_num'] }
-	with open(kwargs['save_path']+'hwe_data/hwe_test_info.txt', 'a') as ifile:
-		ifile.write(json.dumps(test_info)+'\n')      
+	# idx_end = -max(X_test.shape[1],y_test.shape[1])
+	# idx_start = idx_end - X_test.shape[0] + 1
+	# test_idx = df.index[[ i for i in range(idx_start, idx_end+1, 1) ]]
+	# test_info = {'test_idx' : [str(i) for i in test_idx], 'year_num': kwargs['year_num'], 'week_num':kwargs['week_num'] }
+	# with open(kwargs['save_path']+'hwe_data/hwe_test_info.txt', 'a') as ifile:
+	# 	ifile.write(json.dumps(test_info)+'\n')      
 
 	np.save(kwargs['save_path']+'hwe_data/hwe_X_train.npy', X_train)
 	np.save(kwargs['save_path']+'hwe_data/hwe_X_val.npy', X_test)
@@ -289,12 +289,12 @@ def data_gen_process_vlv(*args, **kwargs):
 
 
 	# determine split point for last 1 week test data
-	t_train_end = df.index[-1] - timedelta(hours=2)
+	t_train_end = df.index[-1] - timedelta(weeks=10)
 	test_df = df.loc[t_train_end : , : ]
 	splitvalue = test_df.shape[0]
 
 	# create train and test/validate data
-	X_train, X_test, y_train, y_test = a_utils.df_2_arrays(df = df,
+	X_test, X_train, y_test, y_train = a_utils.df_2_arrays(df = df,
 		predictorcols = ['oat', 'oah', 'wbt', 'sat-oat'], outputcols = ['vlv'], lag = 0,
 		scaling = False, scaler = None, scaleX = True, scaleY = True,
 		split=splitvalue, shuffle=False,
@@ -305,12 +305,12 @@ def data_gen_process_vlv(*args, **kwargs):
 
 
 	# save test ids for later plots
-	idx_end = -max(X_test.shape[1],y_test.shape[1])
-	idx_start = idx_end - X_test.shape[0] + 1
-	test_idx = df.index[[ i for i in range(idx_start, idx_end+1, 1) ]]
-	test_info = {'test_idx' : [str(i) for i in test_idx], 'year_num': kwargs['year_num'], 'week_num':kwargs['week_num'] }
-	with open(kwargs['save_path']+'vlv_data/vlv_test_info.txt', 'a') as ifile:
-		ifile.write(json.dumps(test_info)+'\n')      
+	# idx_end = -max(X_test.shape[1],y_test.shape[1])
+	# idx_start = idx_end - X_test.shape[0] + 1
+	# test_idx = df.index[[ i for i in range(idx_start, idx_end+1, 1) ]]
+	# test_info = {'test_idx' : [str(i) for i in test_idx], 'year_num': kwargs['year_num'], 'week_num':kwargs['week_num'] }
+	# with open(kwargs['save_path']+'vlv_data/vlv_test_info.txt', 'a') as ifile:
+	# 	ifile.write(json.dumps(test_info)+'\n')      
 
 	np.save(kwargs['save_path']+'vlv_data/vlv_X_train.npy', X_train)
 	np.save(kwargs['save_path']+'vlv_data/vlv_X_val.npy', X_test)

@@ -225,10 +225,10 @@ class Env(gym.Env):
 
 		'''Reward for less heating during higher temperatures'''
 		oat_t = s.loc[s.index[0], 'oat']
-		if (oat_t>0.58):  # warm weather > 68F
-			reward_heating = -100.0*T_rl_disch
+		if (oat_t>0.64):  # warm weather > 68F
+			reward_heating = -10.0*T_rl_disch
 		else:
-			reward_heating = -10*T_rl_disch
+			reward_heating = -0.1*T_rl_disch
 		reward_heating /= 0.01*self.episode_length
 
 		# TODO: Create error component
