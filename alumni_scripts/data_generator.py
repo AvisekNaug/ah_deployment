@@ -53,6 +53,8 @@ def offline_data_gen(*args, **kwargs):
 		relearn_interval_kwargs = kwargs['relearn_interval_kwargs']
 		# retrain range in weeks
 		retrain_range_weeks = kwargs['retrain_range_weeks']
+		# rl retrain weeks
+		retrain_range_rl_weeks = kwargs['retrain_range_rl_weeks']
 		# week_num to end
 		week2end = kwargs['week2end']
  
@@ -62,9 +64,15 @@ def offline_data_gen(*args, **kwargs):
 
 		while not end_learning.is_set():
 
-			"""relearning interval decider: here it is a condition; for online it will be time interval or error measure 
-			along side the already exisitng conditions"""
-			if not (lstm_data_available.is_set() | env_data_available.is_set()):  # or condition prevents faster overwrite for env data
+			# condition 1 : data availability -- set to True to be always satisifed
+			data_unavailable = not (lstm_data_available.is_set() | env_data_available.is_set())  # or condition prevents faster overwrite for env data
+			# condition 2 : interval satisfied -- set to True to be always satisifed
+			interval_completed = True
+			# condition 3 : some error is crossing a threshold -- set to True to be always satisifed
+			error_trigger = True
+			# condition 4 : some reward measure is crossing a threshold -- set to True to be always satisifed
+			reward_trigger = True
+			if data_unavailable & interval_completed & error_trigger & reward_trigger:
 
 				log.info('OfflineDataGen: Getting Data from TSDB')
 
@@ -77,25 +85,25 @@ def offline_data_gen(*args, **kwargs):
 											kwargs={ 
 											'df' : result_obj[kwargs['measurement']].loc[:,kwargs['cwe_vars']],
 											'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
-											'week_num': week_num, 'save_path':kwargs['save_path'] 
+											'week_num': week_num, 'save_path':kwargs['save_path'], 'logger':log
 											})
 				data_gen_process_hwe_th = Thread(target=data_gen_process_hwe, daemon=False, 
 											kwargs={ 
 											'df' : result_obj[kwargs['measurement']].loc[:,kwargs['hwe_vars']],
 											'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
-											'week_num': week_num, 'save_path':kwargs['save_path'] 
+											'week_num': week_num, 'save_path':kwargs['save_path'], 'logger':log
 											})
 				data_gen_process_vlv_th = Thread(target=data_gen_process_vlv, daemon=False, 
 											kwargs={ 
 											'df' : result_obj[kwargs['measurement']].loc[:,kwargs['vlv_vars']],
 											'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
-											'week_num': week_num, 'save_path':kwargs['save_path'] 
+											'week_num': week_num, 'save_path':kwargs['save_path'], 'logger':log
 											})
 				data_gen_process_env_th = Thread(target=data_gen_process_env, daemon=False, 
 											kwargs={
 											'df' : df_env,
-											'agg': kwargs['agg'], 'scaler': kwargs['scaler'],
-											'save_path':kwargs['save_path']
+											'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'logger':log,
+											'save_path':kwargs['save_path'], 'retrain_range_rl_weeks':retrain_range_rl_weeks
 											})
 
 
@@ -131,236 +139,260 @@ def offline_data_gen(*args, **kwargs):
 
 def data_gen_process_cwe(*args, **kwargs):
 
-	# read the data from the database
-	df = kwargs['df'].copy()
+	# logger
+	log = kwargs['logger']
+	try:
+		# read the data from the database
+		df = kwargs['df'].copy()
 
-	# smooth the data
-	#df = a_utils.dfsmoothing(df=df, column_names=list(df.columns))
-	df.clip(lower=0, inplace=True) # Remove <0 values for all columns as a result of smoothing
+		# smooth the data
+		#df = a_utils.dfsmoothing(df=df, column_names=list(df.columns))
+		df.clip(lower=0, inplace=True) # Remove <0 values for all columns as a result of smoothing
 
-	# aggregate data
-	rolling_sum_target, rolling_mean_target = [], []
-	for col_name in df.columns:
-		if kwargs['agg'][col_name] == 'sum' : rolling_sum_target.append(col_name)
-		else: rolling_mean_target.append(col_name)
-	
-	df[rolling_sum_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_sum_target)
-	df[rolling_mean_target] =  a_utils.window_mean(df, window_size=6, column_names=rolling_mean_target)
-	df = a_utils.dropNaNrows(df)
+		# aggregate data
+		rolling_sum_target, rolling_mean_target = [], []
+		for col_name in df.columns:
+			if kwargs['agg'][col_name] == 'sum' : rolling_sum_target.append(col_name)
+			else: rolling_mean_target.append(col_name)
+		
+		df[rolling_sum_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_sum_target)
+		df[rolling_mean_target] =  a_utils.window_mean(df, window_size=6, column_names=rolling_mean_target)
+		df = a_utils.dropNaNrows(df)
 
-	# Sample the data at period intervals
-	df = a_utils.sample_timeseries_df(df, period=6)
+		# Sample the data at period intervals
+		df = a_utils.sample_timeseries_df(df, period=6)
 
-	# scale the columns: here we will use min-max
-	df[df.columns] = kwargs['scaler'].minmax_scale(df, df.columns, df.columns)
+		# scale the columns: here we will use min-max
+		df[df.columns] = kwargs['scaler'].minmax_scale(df, df.columns, df.columns)
 
-	# creating sat-oat for the data
-	df['sat-oat'] = df['sat'] - df['oat']
+		# creating sat-oat for the data
+		df['sat-oat'] = df['sat'] - df['oat']
 
-	# select non-zero operating regions
-	df = a_utils.df2operating_regions(df, ['cwe', 'pchw_flow'], [0.001, 0.001])
+		# select non-zero operating regions
+		df = a_utils.df2operating_regions(df, ['cwe', 'pchw_flow'], [0.001, 0.001])
 
-	# determine split point for last 1 week test data
-	t_train_end = df.index[-1] - timedelta(weeks=6)
-	test_df = df.loc[t_train_end : , : ]
-	splitvalue = test_df.shape[0]
+		# determine split point for last 1 week test data
+		t_train_end = df.index[-1] - timedelta(weeks=6)
+		test_df = df.loc[t_train_end : , : ]
+		splitvalue = test_df.shape[0]
 
-	# create train and test/validate data
-	X_test, X_train, y_test, y_train = a_utils.df_2_arrays(df = df,
-		predictorcols = ['sat-oat', 'oah', 'wbt', 'pchw_flow'], outputcols = ['cwe'], lag = 0,
-		scaling = False, scaler = None, scaleX = True, scaleY = True,
-		split=splitvalue, shuffle=False,
-		reshaping=True, input_timesteps=1, output_timesteps = 1,)
+		# create train and test/validate data
+		X_test, X_train, y_test, y_train = a_utils.df_2_arrays(df = df,
+			predictorcols = ['sat-oat', 'oah', 'wbt', 'pchw_flow'], outputcols = ['cwe'], lag = 0,
+			scaling = False, scaler = None, scaleX = True, scaleY = True,
+			split=splitvalue, shuffle=False,
+			reshaping=True, input_timesteps=1, output_timesteps = 1,)
 
-	# save test ids for later plots
-	# idx_end = -max(X_test.shape[1],y_test.shape[1])
-	# idx_start = idx_end - X_test.shape[0] + 1
-	# test_idx = df.index[[ i for i in range(idx_start, idx_end+1, 1) ]]
-	# test_info = {'test_idx' : [str(i) for i in test_idx], 'year_num': kwargs['year_num'], 'week_num':kwargs['week_num'] }
-	# with open(kwargs['save_path']+'cwe_data/cwe_test_info.txt', 'a') as ifile:
-	# 	ifile.write(json.dumps(test_info)+'\n')      
+		# save test ids for later plots
+		# idx_end = -max(X_test.shape[1],y_test.shape[1])
+		# idx_start = idx_end - X_test.shape[0] + 1
+		# test_idx = df.index[[ i for i in range(idx_start, idx_end+1, 1) ]]
+		# test_info = {'test_idx' : [str(i) for i in test_idx], 'year_num': kwargs['year_num'], 'week_num':kwargs['week_num'] }
+		# with open(kwargs['save_path']+'cwe_data/cwe_test_info.txt', 'a') as ifile:
+		# 	ifile.write(json.dumps(test_info)+'\n')      
 
-	np.save(kwargs['save_path']+'cwe_data/cwe_X_train.npy', X_train)
-	np.save(kwargs['save_path']+'cwe_data/cwe_X_val.npy', X_test)
-	np.save(kwargs['save_path']+'cwe_data/cwe_y_train.npy', y_train)
-	np.save(kwargs['save_path']+'cwe_data/cwe_y_val.npy', y_test)
+		np.save(kwargs['save_path']+'cwe_data/cwe_X_train.npy', X_train)
+		np.save(kwargs['save_path']+'cwe_data/cwe_X_val.npy', X_test)
+		np.save(kwargs['save_path']+'cwe_data/cwe_y_train.npy', y_train)
+		np.save(kwargs['save_path']+'cwe_data/cwe_y_val.npy', y_test)
+
+	except Exception as e:
+		log.error('CWE Data Generator Module: %s', str(e))
+		log.debug(e, exc_info=True)
 
 
 def data_gen_process_hwe(*args, **kwargs):
 	
-	# read the data from the database
-	df = kwargs['df'].copy()
+	# logger
+	log = kwargs['logger']
+	try:
+		# read the data from the database
+		df = kwargs['df'].copy()
 
 
-	# smooth the data
-	# df = a_utils.dfsmoothing(df=df, column_names=list(df.columns))
-	df.clip(lower=0, inplace=True) # Remove <0 values for all columns as a result of smoothing
+		# smooth the data
+		# df = a_utils.dfsmoothing(df=df, column_names=list(df.columns))
+		df.clip(lower=0, inplace=True) # Remove <0 values for all columns as a result of smoothing
 
-	# aggregate data
-	rolling_sum_target, rolling_mean_target = [], []
-	for col_name in df.columns:
-		if kwargs['agg'][col_name] == 'sum' : rolling_sum_target.append(col_name)
-		else: rolling_mean_target.append(col_name)
+		# aggregate data
+		rolling_sum_target, rolling_mean_target = [], []
+		for col_name in df.columns:
+			if kwargs['agg'][col_name] == 'sum' : rolling_sum_target.append(col_name)
+			else: rolling_mean_target.append(col_name)
+		
+		df[rolling_sum_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_sum_target)
+		df[rolling_mean_target] =  a_utils.window_mean(df, window_size=6, column_names=rolling_mean_target)
+		df = a_utils.dropNaNrows(df)
+
+		# Sample the data at period intervals
+		df = a_utils.sample_timeseries_df(df, period=6)
+
+		# scale the columns: here we will use min-max
+		df[df.columns] = kwargs['scaler'].minmax_scale(df, df.columns, df.columns)
+
+		# creating sat-oat for the data
+		df['sat-oat'] = df['sat'] - df['oat']
+
+		# select non-zero operating regions
+		df = a_utils.df2operating_regions(df, ['hwe'], [0.001])
+
+		# determine split point for last 1 week test data
+		t_train_end = df.index[-1] - timedelta(weeks=13)
+		test_df = df.loc[t_train_end : , : ]
+		splitvalue = test_df.shape[0]
+
+		# create train and test/validate data
+		X_test, X_train, y_test, y_train = a_utils.df_2_arrays(df = df,
+			predictorcols = ['oat', 'oah', 'wbt', 'sat-oat'], outputcols = ['hwe'], lag = 0,
+			scaling = False, scaler = None, scaleX = True, scaleY = True,
+			split=splitvalue, shuffle=False,
+			reshaping=True, input_timesteps=1, output_timesteps = 1,)
+
+
+		# save test ids for later plots
+		# idx_end = -max(X_test.shape[1],y_test.shape[1])
+		# idx_start = idx_end - X_test.shape[0] + 1
+		# test_idx = df.index[[ i for i in range(idx_start, idx_end+1, 1) ]]
+		# test_info = {'test_idx' : [str(i) for i in test_idx], 'year_num': kwargs['year_num'], 'week_num':kwargs['week_num'] }
+		# with open(kwargs['save_path']+'hwe_data/hwe_test_info.txt', 'a') as ifile:
+		# 	ifile.write(json.dumps(test_info)+'\n')      
+
+		np.save(kwargs['save_path']+'hwe_data/hwe_X_train.npy', X_train)
+		np.save(kwargs['save_path']+'hwe_data/hwe_X_val.npy', X_test)
+		np.save(kwargs['save_path']+'hwe_data/hwe_y_train.npy', y_train)
+		np.save(kwargs['save_path']+'hwe_data/hwe_y_val.npy', y_test)
 	
-	df[rolling_sum_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_sum_target)
-	df[rolling_mean_target] =  a_utils.window_mean(df, window_size=6, column_names=rolling_mean_target)
-	df = a_utils.dropNaNrows(df)
-
-	# Sample the data at period intervals
-	df = a_utils.sample_timeseries_df(df, period=6)
-
-	# scale the columns: here we will use min-max
-	df[df.columns] = kwargs['scaler'].minmax_scale(df, df.columns, df.columns)
-
-	# creating sat-oat for the data
-	df['sat-oat'] = df['sat'] - df['oat']
-
-	# select non-zero operating regions
-	df = a_utils.df2operating_regions(df, ['hwe'], [0.001])
-
-	# determine split point for last 1 week test data
-	t_train_end = df.index[-1] - timedelta(weeks=13)
-	test_df = df.loc[t_train_end : , : ]
-	splitvalue = test_df.shape[0]
-
-	# create train and test/validate data
-	X_test, X_train, y_test, y_train = a_utils.df_2_arrays(df = df,
-		predictorcols = ['oat', 'oah', 'wbt', 'sat-oat'], outputcols = ['hwe'], lag = 0,
-		scaling = False, scaler = None, scaleX = True, scaleY = True,
-		split=splitvalue, shuffle=False,
-		reshaping=True, input_timesteps=1, output_timesteps = 1,)
-
-
-	# save test ids for later plots
-	# idx_end = -max(X_test.shape[1],y_test.shape[1])
-	# idx_start = idx_end - X_test.shape[0] + 1
-	# test_idx = df.index[[ i for i in range(idx_start, idx_end+1, 1) ]]
-	# test_info = {'test_idx' : [str(i) for i in test_idx], 'year_num': kwargs['year_num'], 'week_num':kwargs['week_num'] }
-	# with open(kwargs['save_path']+'hwe_data/hwe_test_info.txt', 'a') as ifile:
-	# 	ifile.write(json.dumps(test_info)+'\n')      
-
-	np.save(kwargs['save_path']+'hwe_data/hwe_X_train.npy', X_train)
-	np.save(kwargs['save_path']+'hwe_data/hwe_X_val.npy', X_test)
-	np.save(kwargs['save_path']+'hwe_data/hwe_y_train.npy', y_train)
-	np.save(kwargs['save_path']+'hwe_data/hwe_y_val.npy', y_test)
-	
-	# except Exception:
-	# 	import traceback
-	# 	print(traceback.format_exc())
+	except Exception as e:
+		log.error('HWE Data Generator Module: %s', str(e))
+		log.debug(e, exc_info=True)
 
 
 def data_gen_process_vlv(*args, **kwargs):
 	
-	# read the data from the database
-	df = kwargs['df'].copy()
+	# logger
+	log = kwargs['logger']
+	try:
+		# read the data from the database
+		df = kwargs['df'].copy()
 
 
-	# smooth the data
-	# df = a_utils.dfsmoothing(df=df, column_names=list(df.columns))
-	df.clip(lower=0, inplace=True) # Remove <0 values for all columns as a result of smoothing
-	
+		# smooth the data
+		# df = a_utils.dfsmoothing(df=df, column_names=list(df.columns))
+		df.clip(lower=0, inplace=True) # Remove <0 values for all columns as a result of smoothing
+		
 
-	# aggregate data
-	rolling_sum_target, rolling_mean_target = [], []
-	for col_name in df.columns:
-		if kwargs['agg'][col_name] == 'sum' : rolling_sum_target.append(col_name)
-		else: rolling_mean_target.append(col_name)
-	
-	df[rolling_sum_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_sum_target)
-	df[rolling_mean_target] =  a_utils.window_mean(df, window_size=6, column_names=rolling_mean_target)
-	df = a_utils.dropNaNrows(df)
-
-
-	# Sample the data at period intervals
-	df = a_utils.sample_timeseries_df(df, period=6)
+		# aggregate data
+		rolling_sum_target, rolling_mean_target = [], []
+		for col_name in df.columns:
+			if kwargs['agg'][col_name] == 'sum' : rolling_sum_target.append(col_name)
+			else: rolling_mean_target.append(col_name)
+		
+		df[rolling_sum_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_sum_target)
+		df[rolling_mean_target] =  a_utils.window_mean(df, window_size=6, column_names=rolling_mean_target)
+		df = a_utils.dropNaNrows(df)
 
 
-	# scale the columns: here we will use min-max
-	df[df.columns] = kwargs['scaler'].minmax_scale(df, df.columns, df.columns)
+		# Sample the data at period intervals
+		df = a_utils.sample_timeseries_df(df, period=6)
 
 
-	# creating sat-oat for the data
-	df['sat-oat'] = df['sat'] - df['oat']
+		# scale the columns: here we will use min-max
+		df[df.columns] = kwargs['scaler'].minmax_scale(df, df.columns, df.columns)
 
 
-	# add binary classification column
-	df['vlv'] = 1.0
-	df.loc[df['hwe']<= 0.001, ['vlv']] = 0
+		# creating sat-oat for the data
+		df['sat-oat'] = df['sat'] - df['oat']
 
 
-	# determine split point for last 1 week test data
-	t_train_end = df.index[-1] - timedelta(weeks=10)
-	test_df = df.loc[t_train_end : , : ]
-	splitvalue = test_df.shape[0]
-
-	# create train and test/validate data
-	X_test, X_train, y_test, y_train = a_utils.df_2_arrays(df = df,
-		predictorcols = ['oat', 'oah', 'wbt', 'sat-oat'], outputcols = ['vlv'], lag = 0,
-		scaling = False, scaler = None, scaleX = True, scaleY = True,
-		split=splitvalue, shuffle=False,
-		reshaping=True, input_timesteps=1, output_timesteps = 1,)
-
-	y_train = to_categorical(y_train)
-	y_test = to_categorical(y_test)
+		# add binary classification column
+		df['vlv'] = 1.0
+		df.loc[df['hwe']<= 0.001, ['vlv']] = 0
 
 
-	# save test ids for later plots
-	# idx_end = -max(X_test.shape[1],y_test.shape[1])
-	# idx_start = idx_end - X_test.shape[0] + 1
-	# test_idx = df.index[[ i for i in range(idx_start, idx_end+1, 1) ]]
-	# test_info = {'test_idx' : [str(i) for i in test_idx], 'year_num': kwargs['year_num'], 'week_num':kwargs['week_num'] }
-	# with open(kwargs['save_path']+'vlv_data/vlv_test_info.txt', 'a') as ifile:
-	# 	ifile.write(json.dumps(test_info)+'\n')      
+		# determine split point for last 1 week test data
+		t_train_end = df.index[-1] - timedelta(weeks=10)
+		test_df = df.loc[t_train_end : , : ]
+		splitvalue = test_df.shape[0]
 
-	np.save(kwargs['save_path']+'vlv_data/vlv_X_train.npy', X_train)
-	np.save(kwargs['save_path']+'vlv_data/vlv_X_val.npy', X_test)
-	np.save(kwargs['save_path']+'vlv_data/vlv_y_train.npy', y_train)
-	np.save(kwargs['save_path']+'vlv_data/vlv_y_val.npy', y_test)
+		# create train and test/validate data
+		X_test, X_train, y_test, y_train = a_utils.df_2_arrays(df = df,
+			predictorcols = ['oat', 'oah', 'wbt', 'sat-oat'], outputcols = ['vlv'], lag = 0,
+			scaling = False, scaler = None, scaleX = True, scaleY = True,
+			split=splitvalue, shuffle=False,
+			reshaping=True, input_timesteps=1, output_timesteps = 1,)
+
+		y_train = to_categorical(y_train)
+		y_test = to_categorical(y_test)
+
+
+		# save test ids for later plots
+		# idx_end = -max(X_test.shape[1],y_test.shape[1])
+		# idx_start = idx_end - X_test.shape[0] + 1
+		# test_idx = df.index[[ i for i in range(idx_start, idx_end+1, 1) ]]
+		# test_info = {'test_idx' : [str(i) for i in test_idx], 'year_num': kwargs['year_num'], 'week_num':kwargs['week_num'] }
+		# with open(kwargs['save_path']+'vlv_data/vlv_test_info.txt', 'a') as ifile:
+		# 	ifile.write(json.dumps(test_info)+'\n')      
+
+		np.save(kwargs['save_path']+'vlv_data/vlv_X_train.npy', X_train)
+		np.save(kwargs['save_path']+'vlv_data/vlv_X_val.npy', X_test)
+		np.save(kwargs['save_path']+'vlv_data/vlv_y_train.npy', y_train)
+		np.save(kwargs['save_path']+'vlv_data/vlv_y_val.npy', y_test)
+
+	except Exception as e:
+		log.error('VLV Data Generator Module: %s', str(e))
+		log.debug(e, exc_info=True)
 
 
 def data_gen_process_env(*args, **kwargs):
 
-	# read the data from the database
-	df = kwargs['df'].copy()
+	# logger
+	log = kwargs['logger']
+	try:
+		# read the data from the database
+		df = kwargs['df'].copy()
 
-	# smooth the data
-	# df = a_utils.dfsmoothing(df=df, column_names=list(df.columns))
-	df.clip(lower=0, inplace=True) # Remove <0 values for all columns as a result of smoothing
-	
+		# smooth the data
+		# df = a_utils.dfsmoothing(df=df, column_names=list(df.columns))
+		df.clip(lower=0, inplace=True) # Remove <0 values for all columns as a result of smoothing
+		
 
-	# aggregate data
-	rolling_sum_target, rolling_mean_target = [], []
-	for col_name in df.columns:
-		if kwargs['agg'][col_name] == 'sum' : rolling_sum_target.append(col_name)
-		else: rolling_mean_target.append(col_name)
-	
-	df[rolling_sum_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_sum_target)
-	df[rolling_mean_target] =  a_utils.window_mean(df, window_size=6, column_names=rolling_mean_target)
-	df = a_utils.dropNaNrows(df)
-
-
-	# Sample the data at period intervals
-	df = a_utils.sample_timeseries_df(df, period=6)
+		# aggregate data
+		rolling_sum_target, rolling_mean_target = [], []
+		for col_name in df.columns:
+			if kwargs['agg'][col_name] == 'sum' : rolling_sum_target.append(col_name)
+			else: rolling_mean_target.append(col_name)
+		
+		df[rolling_sum_target] =  a_utils.window_sum(df, window_size=6, column_names=rolling_sum_target)
+		df[rolling_mean_target] =  a_utils.window_mean(df, window_size=6, column_names=rolling_mean_target)
+		df = a_utils.dropNaNrows(df)
 
 
-	# scale the columns: here we will use min-max
-	df[df.columns] = kwargs['scaler'].minmax_scale(df, df.columns, df.columns)
+		# Sample the data at period intervals
+		df = a_utils.sample_timeseries_df(df, period=6)
 
-	# creating sat-oat for the data
-	df['sat-oat'] = df['sat'] - df['oat']
 
-	# create avg_stpt column
-	stpt_cols = [ele for ele in df.columns if 'vrf' in ele]
-	df['avg_stpt'] = df[stpt_cols].mean(axis=1)
-	# drop individual set point cols
-	df.drop( columns = stpt_cols, inplace = True)
+		# scale the columns: here we will use min-max
+		df[df.columns] = kwargs['scaler'].minmax_scale(df, df.columns, df.columns)
 
-	# select retrain range of the data
-	time_start_of_train = df.index[-1]-timedelta(weeks=kwargs['retrain_range_rl_weeks'])
-	df = df.loc[time_start_of_train : , :]
+		# creating sat-oat for the data
+		df['sat-oat'] = df['sat'] - df['oat']
 
-	# save the data frame
-	df.to_pickle(kwargs['save_path']+'env_data/env_data.pkl')
+		# create avg_stpt column
+		stpt_cols = [ele for ele in df.columns if 'vrf' in ele]
+		df['avg_stpt'] = df[stpt_cols].mean(axis=1)
+		# drop individual set point cols
+		df.drop( columns = stpt_cols, inplace = True)
+
+		# select retrain range of the data
+		time_start_of_train = df.index[-1]-timedelta(weeks=kwargs['retrain_range_rl_weeks'])
+		df = df.loc[time_start_of_train : , :]
+
+		# save the data frame
+		df.to_pickle(kwargs['save_path']+'env_data/env_data.pkl')
+
+	except Exception as e:
+		log.error('ENV Data Generator Module: %s', str(e))
+		log.debug(e, exc_info=True)
 
 
 def online_data_gen(*args, **kwargs):
@@ -427,24 +459,24 @@ def online_data_gen(*args, **kwargs):
 											kwargs={ 
 											'df' : df.loc[:,kwargs['cwe_vars']],
 											'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
-											'week_num': week_num, 'save_path':kwargs['save_path'] 
+											'week_num': week_num, 'save_path':kwargs['save_path'], 'logger':log
 											})
 				data_gen_process_hwe_th = Thread(target=data_gen_process_hwe, daemon=False, 
 											kwargs={ 
 											'df' : df.loc[:,kwargs['hwe_vars']],
 											'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
-											'week_num': week_num, 'save_path':kwargs['save_path'] 
+											'week_num': week_num, 'save_path':kwargs['save_path'], 'logger':log
 											})
 				data_gen_process_vlv_th = Thread(target=data_gen_process_vlv, daemon=False, 
 											kwargs={ 
 											'df' : df.loc[:,kwargs['vlv_vars']],
 											'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
-											'week_num': week_num, 'save_path':kwargs['save_path'] 
+											'week_num': week_num, 'save_path':kwargs['save_path'], 'logger':log
 											})
 				data_gen_process_env_th = Thread(target=data_gen_process_env, daemon=False, 
 											kwargs={
 											'df' : df,
-											'agg': kwargs['agg'], 'scaler': kwargs['scaler'],
+											'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'logger':log,
 											'save_path':kwargs['save_path'], 'retrain_range_rl_weeks':retrain_range_rl_weeks
 											})
 				with lstm_train_data_lock:
