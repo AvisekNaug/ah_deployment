@@ -96,8 +96,8 @@ if __name__ == "__main__":
 			utils.make_dirs(env_data)  # prevent data overwrite from offline exps
 		if not path.exists(model_path):
 			utils.make_dirs(model_path)  # prevent data overwrite from offline exps
-		if not path.exists(log_path):
-			utils.make_dirs(log_path)  # prevent data overwrite from offline exps
+		# if not path.exists(log_path):
+		utils.make_dirs(log_path)  # prevent data overwrite from offline exps
 		utils.make_dirs(results)
 		if not path.exists(rl_perf_data):
 			utils.make_dirs(rl_perf_data)  # prevent data overwrite from offline exps

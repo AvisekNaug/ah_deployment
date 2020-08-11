@@ -145,15 +145,13 @@ def get_real_obs(api_args: dict, meta_data_: dict, obs_space_vars : list, scaler
 			copyfile('data/trend_data/alumni_data_deployment_bakcup.csv','data/trend_data/alumni_data_deployment.csv')
 
 		# get the dataframe from a csv
-		df_ = read_csv('data/trend_data/alumni_data_deployment.csv', )
+		df_ = read_csv('data/trend_data/alumni_data_deployment.csv',)
 
 		# if deployment data is not of appropriate shape, reuse old data
-		if df_.empty:
-			log.info('Deploy Control Module: BdX API data is empty, reusing old data')
+		if (df_.empty) | (df_.shape[0]<period) | (df_.isnull().any().any()):
+			log.info('Deploy Control Module: BdX API data is empty or sparse or has NaN, reusing old data')
 			copyfile('data/trend_data/alumni_data_deployment_bakcup.csv','data/trend_data/alumni_data_deployment.csv')
-		if df_.shape[0]<6:
-			log.info('Deploy Control Module: BdX API data is does not have minimum rows, reusing old data')
-			copyfile('data/trend_data/alumni_data_deployment_bakcup.csv','data/trend_data/alumni_data_deployment.csv')
+			df_ = read_csv('data/trend_data/alumni_data_deployment.csv', )
 
 		# process data
 		df_['time'] = to_datetime(df_['time'])
