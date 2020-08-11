@@ -49,8 +49,9 @@ This repo is used to deploy a reinforcement learning controller on the Alumni Ha
 	```bash
 	$ python wbt_calculator.py
 	```
-Step 3 is not needed for Alumni Deployment
-3. **In case** you want to run the production facing server to visualize a live Dashboard, open a new terminal and execute the following
+Step 4 is **not needed** for Alumni Deployment
+
+4. **In case** you want to run the production facing server to visualize a live Dashboard, open a new terminal and execute the following
 	```bash
 	$ waitress-serve --host <server ip address> --port <port to run> live_plot:app.server
 	```
