@@ -29,6 +29,7 @@ sys.path.append(os.path.abspath(os.path.join('..')))
 import time
 import multiprocessing
 import psutil
+from shutil import copyfile
 
 
 def offline_data_gen(*args, **kwargs):
@@ -544,9 +545,11 @@ def get_train_data(api_args, meta_data_, retrain_range_weeks, log):
 		# pull the data into csv file
 		try:
 			dp.pull_offline_data(**api_args)
-			log.info('OnlineDataGen: Train Data Obtained  using API')
+			copyfile('data/trend_data/alumni_data_train.csv','data/trend_data/alumni_data_train_old.csv')
+			log.info('OnlineDataGen: Train Data Obtained using API')
 		except Exception:
-			log.info('OnlineDataGen: BdX API could not get train data: will resuse old data')
+			os.rename('data/trend_data/alumni_data_train_old.csv', 'data/trend_data/alumni_data_train.csv')
+			log.info('OnlineDataGen: BdX API could not get train data: will resuse old data')	
 
 		# get the dataframe from a csv
 		while True:
