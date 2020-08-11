@@ -156,9 +156,9 @@ class nn_model(datadrivenmodel):
 			monitor = 'val_loss', save_best_only = True, period=2)
 		self.earlystopping = EarlyStopping(monitor = 'val_loss', patience=5, restore_best_weights=False)
 		self.reduclronplateau = ReduceLROnPlateau(monitor = 'val_loss', patience=2, cooldown = 3)
-		self.tbCallBack = TensorBoard(log_dir=self.save_path+'loginfo', batch_size=self.train_batchsize, histogram_freq=0,
-		write_graph=False, write_images=False, write_grads=True)
-		self.cb_list = [self.modelchkpt, self.earlystopping, self.reduclronplateau, self.tbCallBack]
+		# self.tbCallBack = TensorBoard(log_dir=self.save_path+'loginfo', batch_size=self.train_batchsize, histogram_freq=0,
+		# write_graph=False, write_images=False, write_grads=True)
+		self.cb_list = [self.modelchkpt, self.earlystopping, self.reduclronplateau]  # , self.tbCallBack]
 		return self.cb_list
 
 
@@ -296,9 +296,9 @@ class no_val_nn_model(datadrivenmodel):
 			monitor = 'loss', save_best_only = True, period=2)
 		self.earlystopping = EarlyStopping(monitor = 'loss', patience=5, restore_best_weights=False)
 		self.reduclronplateau = ReduceLROnPlateau(monitor = 'loss', patience=2, cooldown = 3)
-		self.tbCallBack = TensorBoard(log_dir=self.save_path+'loginfo', batch_size=self.train_batchsize, histogram_freq=0,
-		write_graph=False, write_images=False, write_grads=True)
-		self.cb_list = [self.modelchkpt, self.earlystopping, self.reduclronplateau, self.tbCallBack]
+		# self.tbCallBack = TensorBoard(log_dir=self.save_path+'loginfo', batch_size=self.train_batchsize, histogram_freq=0,
+		# write_graph=False, write_images=False, write_grads=True)
+		self.cb_list = [self.modelchkpt, self.earlystopping, self.reduclronplateau] #, self.tbCallBack]
 		return self.cb_list
 
 

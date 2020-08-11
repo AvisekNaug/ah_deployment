@@ -14,14 +14,16 @@ auths.json
 tmp
 logs
 results
+
 # custom
 todo.txt
 log.txt
 *.out
 experience.csv
 reheat_preheat_setpoint.txt
-trend_data
 sample_experience.csv
 sample_log.txt
 dashreq.txt
 sorted.py
+alumni_data_train.csv
+alumni_data_deployment.csv

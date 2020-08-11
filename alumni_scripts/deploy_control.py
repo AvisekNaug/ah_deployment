@@ -11,6 +11,7 @@ from multiprocessing import Event, Lock
 import time
 import pytz
 from dateutil import tz
+from shutil import copyfile
 
 import warnings
 with warnings.catch_warnings():
@@ -46,7 +47,7 @@ def deploy_control(*args, **kwargs):
 		stpt_delta = np.array([0.0]) # in delta F
 		stpt_unscaled = np.array([68.0])  # in F
 		stpt_scaled = scaler.minmax_scale(stpt_unscaled, ['sat'], ['sat'])
-		not_first_loop = True
+		not_first_loop = False
 		period = kwargs['period']
 
 		# an initial trained model has to exist
@@ -82,7 +83,7 @@ def deploy_control(*args, **kwargs):
 			# get new agent model in case it is available
 			if agent_weights_available.is_set():
 				with agent_weights_lock:
-					rl_agent = PPO2.load(kwargs['best_rl_agent_path'])
+					rl_agent.load_parameters(kwargs['best_rl_agent_path'])
 				agent_weights_available.clear()
 				log.info('Deploy Control Module: Controller Weights Adapted')
 
@@ -138,11 +139,23 @@ def get_real_obs(api_args: dict, meta_data_: dict, obs_space_vars : list, scaler
 		try:
 			dp.pull_online_data(**api_args)
 			log.info('Deploy Control Module: Deployment Data obtained from API')
+			copyfile('data/trend_data/alumni_data_deployment.csv','data/trend_data/alumni_data_deployment_bakcup.csv')
 		except Exception:
 			log.info('Deploy Control Module: BdX API could not get data: will resuse old data')
+			copyfile('data/trend_data/alumni_data_deployment_bakcup.csv','data/trend_data/alumni_data_deployment.csv')
 
 		# get the dataframe from a csv
 		df_ = read_csv('data/trend_data/alumni_data_deployment.csv', )
+
+		# if deployment data is not of appropriate shape, reuse old data
+		if df_.empty:
+			log.info('Deploy Control Module: BdX API data is empty, reusing old data')
+			copyfile('data/trend_data/alumni_data_deployment_bakcup.csv','data/trend_data/alumni_data_deployment.csv')
+		if df_.shape[0]<6:
+			log.info('Deploy Control Module: BdX API data is does not have minimum rows, reusing old data')
+			copyfile('data/trend_data/alumni_data_deployment_bakcup.csv','data/trend_data/alumni_data_deployment.csv')
+
+		# process data
 		df_['time'] = to_datetime(df_['time'])
 		to_zone = tz.tzlocal()
 		df_['time'] = df_['time'].apply(lambda x: x.astimezone(to_zone)) # convert time to loca timezones

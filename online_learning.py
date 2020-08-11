@@ -67,7 +67,7 @@ if __name__ == "__main__":
 		# period of data
 		period = 6 # 1 = 5 mins, 6 = 30 mins
 		# num of steps to learn rl in each train method
-		rl_train_steps = int((60/(period*5))*24*7*retrain_range_rl_weeks*60)
+		rl_train_steps = int((60/(period*5))*24*7*retrain_range_rl_weeks*150)
 		# reinitialize agent at the end of every learning iteration
 		reinit_agent = True
 
@@ -101,7 +101,7 @@ if __name__ == "__main__":
 		utils.make_dirs(results)
 		if not path.exists(rl_perf_data):
 			utils.make_dirs(rl_perf_data)  # prevent data overwrite from offline exps
-		utils.make_dirs(trend_data)
+		# utils.make_dirs(trend_data)
 
 		exp_params['cwe_model_config'] = {
 			'model_type': 'regresion', 'train_batchsize' : 16,

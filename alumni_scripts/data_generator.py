@@ -238,7 +238,7 @@ def data_gen_process_hwe(*args, **kwargs):
 		df = a_utils.df2operating_regions(df, ['hwe'], [0.001])
 
 		# determine split point for last 1 week test data
-		t_train_end = df.index[-1] - timedelta(weeks=13)
+		t_train_end = df.index[-1] - timedelta(weeks=6)
 		test_df = df.loc[t_train_end : , : ]
 		splitvalue = test_df.shape[0]
 
@@ -495,24 +495,6 @@ def online_data_gen(*args, **kwargs):
 				env_data_available.set()  # data is now available for agent and env training
 
 				log.info('OnlineDataGen: Dynamic Model and Gym Env data available')
-				# with lstm_train_data_lock:
-				# 	data_gen_process_cwe(**{ 'df' : df.loc[:,kwargs['cwe_vars']],
-				# 							'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
-				# 							'week_num': week_num, 'save_path':kwargs['save_path']})
-				# 	data_gen_process_hwe(**{ 'df' : df.loc[:,kwargs['hwe_vars']],
-				# 							'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
-				# 							'week_num': week_num, 'save_path':kwargs['save_path']})
-				# 	data_gen_process_vlv(**{ 'df' : df.loc[:,kwargs['vlv_vars']],
-				# 							'agg': kwargs['agg'], 'scaler': kwargs['scaler'], 'year_num': year_num,
-				# 							'week_num': week_num, 'save_path':kwargs['save_path']})
-				# lstm_data_available.set()
-				# with env_train_data_lock:
-				# 	data_gen_process_env(**{'df' : df,
-				# 							'agg': kwargs['agg'], 'scaler': kwargs['scaler'],
-				# 							'save_path':kwargs['save_path']})		
-				# env_data_available.set()
-				
-
 
 				week_num += 1
 				week_num = week_num if week_num%53 != 0 else 1
@@ -548,8 +530,8 @@ def get_train_data(api_args, meta_data_, retrain_range_weeks, log):
 			copyfile('data/trend_data/alumni_data_train.csv','data/trend_data/alumni_data_train_old.csv')
 			log.info('OnlineDataGen: Train Data Obtained using API')
 		except Exception:
-			os.rename('data/trend_data/alumni_data_train_old.csv', 'data/trend_data/alumni_data_train.csv')
-			log.info('OnlineDataGen: BdX API could not get train data: will resuse old data')	
+			copyfile('data/trend_data/alumni_data_train_old.csv', 'data/trend_data/alumni_data_train.csv')
+			log.info('OnlineDataGen: BdX API could not get train data: will resuse old data')
 
 		# get the dataframe from a csv
 		while True:

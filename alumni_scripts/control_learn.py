@@ -36,7 +36,7 @@ def controller_learn(*args, **kwargs):
 		interval = kwargs['interval']
 		env_created = False
 		agent_created = False
-		writeheader = True
+		writeheader, first_loop = True, True
 		# to_break = False
 		reinit_agent = kwargs['reinit_agent']
 		online_mode = kwargs['online_mode']
@@ -56,12 +56,19 @@ def controller_learn(*args, **kwargs):
 				env_data_available.clear()
 				log.info('Control Learn Module: Environment Data loaded')
 
-				with lstm_weights_lock:
-					cwe_energy_model  =load_model(kwargs['env_config']['model_path']+'cwe_best_model')
-					hwe_energy_model  =load_model(kwargs['env_config']['model_path']+'hwe_best_model')
-					vlv_energy_model  =load_model(kwargs['env_config']['model_path']+'vlv_best_model')
+				if first_loop: # acts as a first loop indicator, that's why used here
+					with lstm_weights_lock:
+						cwe_energy_model  =load_model(kwargs['env_config']['model_path']+'cwe_best_model')
+						hwe_energy_model  =load_model(kwargs['env_config']['model_path']+'hwe_best_model')
+						vlv_energy_model  =load_model(kwargs['env_config']['model_path']+'vlv_best_model')
+						log.info('Control Learn Module: Env Dynamic Models loaded')
+				else:
+					with lstm_weights_lock:
+						cwe_energy_model.load_weights(kwargs['env_config']['model_path']+'cwe_best_model')
+						hwe_energy_model.load_weights(kwargs['env_config']['model_path']+'hwe_best_model')
+						vlv_energy_model.load_weights(kwargs['env_config']['model_path']+'vlv_best_model')
+						log.info('Control Learn Module: Env Dynamic Models Re-loaded')
 				lstm_weights_available.clear()
-				log.info('Control Learn Module: Env Dynamic Models loaded')
 
 				"""create environment with new data"""
 				monitor_dir = kwargs['env_config']['logs']+'Interval_{}/'.format(interval)
@@ -143,14 +150,14 @@ def controller_learn(*args, **kwargs):
 				log.info("Control Learn Module: Environment Set to train mode")
 				env.env_method('trainenv')
 				with agent_weights_lock:
-					agent = ppo_agent.train_agent(agent, env = env, steps=kwargs['rl_train_steps'])
+					ppo_agent.train_agent(agent, env = env, steps=kwargs['rl_train_steps'])
 
 				"""test rl model"""
 				log.info("Control Learn Module: Environment Set to test mode")
 				env.env_method('testenv')
 				# provide path to the current best rl agent weights and test it
 				with agent_weights_lock:
-					test_perf_log = ppo_agent.test_agent(best_rl_agent_path, env, num_episodes=1)
+					test_perf_log = ppo_agent.test_agent(agent, best_rl_agent_path, env, num_episodes=1)
 				
 				if online_mode: 
 					agent_weights_available.set()  # agent weights are available for deployment thread
