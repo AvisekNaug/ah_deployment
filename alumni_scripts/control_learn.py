@@ -36,13 +36,9 @@ def controller_learn(*args, **kwargs):
 		agent_weights_lock : Lock = kwargs['agent_weights_lock']  # prevent data read/write access
 		# check variables
 		interval = kwargs['interval']
-		env_created = False
-		agent_created = False
 		writeheader = True
 		test_control = True
 		# to_break = False
-		reinit_agent = kwargs['reinit_agent']
-		online_mode = kwargs['online_mode']
 		best_rl_agent_path = kwargs['env_config']['model_path'] + 'best_rl_agent'
 
 		while (not end_learning.is_set()) | (env_data_available.is_set()):
@@ -99,50 +95,23 @@ def controller_learn(*args, **kwargs):
 				)
 
 				""" create the Gym env"""
-				if not env_created:
-					env_id = alumni_env.Env  # the environment ID or the environment class
-					start_index = 0  # start rank index
-					vec_env_cls = DummyVecEnv
-					with lstm_weights_lock:
-						env = alumni_env_wrapper.custom_make_vec_env(
-							env_id=env_id, n_envs=1, start_index = start_index, monitor_dir = monitor_dir,
-							vec_env_cls = vec_env_cls, env_kwargs = env_kwargs
-						)
-					log.info('Control Learn Module: Env Dynamic Models loaded')
-					lstm_weights_available.clear()
-					env_created = True
-					log.info("Control Learn Module: Environment Created")
-				else:  # re-initialize env with new interval's data
-					# change the monitor log directory
-					env.env_method('changelogpath', (monitor_dir))
-					# reinitialize the environment with new data and models
-					with lstm_weights_lock:
-						env.env_method('re_init_env', **env_kwargs)
-					lstm_weights_available.clear()
-					log.info('Control Learn Module: Env Dynamic Models Re-loaded')
-					log.info("Control Learn Module: Environment Reinitialized")
+				env_id = alumni_env.Env  # the environment ID or the environment class
+				start_index = 0  # start rank index
+				with lstm_weights_lock:
+					env = alumni_env_wrapper.custom_make_vec_env(
+						env_id=env_id, n_envs=1, start_index = start_index, monitor_dir = monitor_dir,
+						vec_env_cls = DummyVecEnv, env_kwargs = env_kwargs
+					)
+				log.info('Control Learn Module: Env Dynamic Models loaded')
+				lstm_weights_available.clear()
+				log.info("Control Learn Module: Environment Created")
 
 				"""provide envrionment to the new rl agent for ppo to decide its state and actions spaces"""
-				if not agent_created:
-					agent = ppo_agent.get_agent(env=env, 
-												model_save_dir=kwargs['env_config']['model_path'],
-												monitor_log_dir = kwargs['env_config']['logs'],
-												logger = log)
-					log.info("Control Learn Module: Agent Created")
-
-					# save initialized weights: load at each loop for better results w/o creating
-					# additional agent grahps in tf.Graph
-					agent.save(kwargs['env_config']['model_path'] + 'init_rl_agent')
-
-					#if online_mode:
-					#	agent.load(best_rl_agent_path, env = env)
-					#	log.info("Control Learn Module: Agent Weights loaded from Offline Phase")
-					#	# online_mode = False
-					agent_created = True
-				# ** agent uses "monitor_log_dir" to update agent by looking at rewards
-				
-				elif reinit_agent:
-					agent.load_parameters(kwargs['env_config']['model_path'] + 'init_rl_agent')
+				agent = ppo_agent.get_agent(env=env, 
+											model_save_dir=kwargs['env_config']['model_path'],
+											monitor_log_dir = kwargs['env_config']['logs'],
+											logger = log)
+				log.info("Control Learn Module: Agent Created")
 				
 				"""Start training the agent"""
 				log.info("Control Learn Module: Environment Set to train mode")
@@ -162,17 +131,14 @@ def controller_learn(*args, **kwargs):
 									save_as= 'csv', header=writeheader)
 					writeheader = False  # don't write header after first iteration
 				
+				# !! TODO: Have to uncomment this for deployment
 				# if online_mode: 
-				# 	agent_weights_available.set()  # agent weights are available for deployment thread		
+				# 	agent_weights_available.set()  # agent weights are available for deployment thread
 
-				interval += 1
-
-				# if no more learning is needed end this thread
-				# if to_break:
-				# 	break
-				# if end_learning.is_set():  # break after the next loop
-				# 	to_break = True
+				del agent, env
 				gc.collect()
+
+				break
 
 	except Exception as e:
 		log.error('Control Learning Module: %s', str(e))

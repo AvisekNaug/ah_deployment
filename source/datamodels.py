@@ -153,12 +153,10 @@ class nn_model(datadrivenmodel):
 		Create callbacks
 		"""
 		self.modelchkpt = ModelCheckpoint(self.model_path +self.name+'_best_model',
-			monitor = 'val_loss', save_best_only = True, period=2)
+			monitor = 'val_loss', save_best_only = True, period=2, save_weights_only=False)
 		self.earlystopping = EarlyStopping(monitor = 'val_loss', patience=5, restore_best_weights=False)
 		self.reduclronplateau = ReduceLROnPlateau(monitor = 'val_loss', patience=2, cooldown = 3)
-		# self.tbCallBack = TensorBoard(log_dir=self.save_path+'loginfo', batch_size=self.train_batchsize, histogram_freq=0,
-		# write_graph=False, write_images=False, write_grads=True)
-		self.cb_list = [self.modelchkpt, self.earlystopping, self.reduclronplateau]  # , self.tbCallBack]
+		self.cb_list = [self.modelchkpt, self.earlystopping, self.reduclronplateau]
 		return self.cb_list
 
 

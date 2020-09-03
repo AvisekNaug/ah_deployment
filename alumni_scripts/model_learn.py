@@ -52,14 +52,6 @@ def data_driven_model_learn(*args, **kwargs):
 				vlv_model.compile()
 				log.info("Dynamic Model Learning Module: Models Initialized/Reinitialized")
 
-				# if models are available from previous offline training
-				# if lstm_weights_available.is_set():
-				# 	with lstm_weights_lock:
-				# 		cwe_model.load_weights()
-				# 		hwe_model.load_weights()
-				# 		vlv_model.load_weights()
-				# 	lstm_weights_available.clear()
-				# 	log.info("Dynamic Model Learning Module: Models Loaded from Offline Phase")
 				models_created = True
 
 			# data is available and prev models have been read by env
@@ -99,10 +91,6 @@ def data_driven_model_learn(*args, **kwargs):
 					th_cwe_learn.join()
 					th_hwe_learn.join()
 					th_vlv_learn.join()
-
-				del th_cwe_learn
-				del th_hwe_learn
-				del th_vlv_learn
 					
 				# weights are available
 				lstm_weights_available.set()
@@ -128,18 +116,22 @@ def data_driven_model_learn(*args, **kwargs):
 					eval_interval += 1
 					log.info("Dynamic Model Learning Module: Model Prediction Finished")
 
-				"""re-init lstm certanin layers"""
-				# cwe_model.re_init_layers()
-				# hwe_model.re_init_layers()
-				# vlv_model.re_init_layers()
-				# log.info("Dynamic Model Learning Module: Model LSTM Layers Re-initialized")
+				"""Delete old threads"""
+				del th_cwe_learn
+				del th_hwe_learn
+				del th_vlv_learn
 
 				""""Delete models and set modes_created to False"""
-				del cwe_model, hwe_model, vlv_model
-				log.info("Dynamic Model Learning Module: Deleted Dynamic Models from prev iteration")
-				models_created = False
+				del cwe_model
+				del hwe_model
+				del vlv_model
 
 				gc.collect()
+				log.info("Dynamic Model Learning Module: Deleted Dynamic Models from prev iteration")
+				models_created = False
+				
+
+				break
 
 	except Exception as e:
 		log.error('Dynamic Model Learning Module: %s', str(e))

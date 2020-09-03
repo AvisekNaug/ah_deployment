@@ -15,6 +15,7 @@ from gym.utils import seeding
 import warnings
 with warnings.catch_warnings():
 	from keras.models import load_model
+	import tensorflow as tf
 
 class Env(gym.Env):
 
@@ -28,9 +29,14 @@ class Env(gym.Env):
 				 vlv_state_model_path, vlv_input_shape, vlv_input_vars,
 				 slicepoint = 12/13,
 				 **kwargs):
-		self.cwe_model = load_model(cwe_energy_model_path)
-		self.hwe_model = load_model(hwe_energy_model_path)
-		self.vlv_model = load_model(vlv_state_model_path)
+
+		self.graph = tf.Graph()
+		self.session = tf.Session(graph=self.graph)
+		with self.graph.as_default():  # pylint: disable=not-context-manager
+			with self.session.as_default():  # pylint: disable=not-context-manager
+				self.cwe_model = load_model(cwe_energy_model_path)
+				self.hwe_model = load_model(hwe_energy_model_path)
+				self.vlv_model = load_model(vlv_state_model_path)
 
 		self.re_init_env(df,totaldf_stats,
 				 obs_space_vars,
@@ -299,7 +305,9 @@ class Env(gym.Env):
 		# convert to array and reshape
 		cwe_in_obs = cwe_in_obs.to_numpy().reshape(self.cwe_input_shape)
 		# calculate cooling energy
-		cooling_energy = float(self.cwe_model.predict(cwe_in_obs, batch_size=1).flatten())
+		with self.graph.as_default():  # pylint: disable=not-context-manager
+			with self.session.as_default():  # pylint: disable=not-context-manager
+				cooling_energy = float(self.cwe_model.predict(cwe_in_obs, batch_size=1).flatten())
 
 		"""valve state prediction"""
 		# now select the inputs
@@ -307,7 +315,9 @@ class Env(gym.Env):
 		# convert to array and reshape
 		vlv_in_obs = vlv_in_obs.to_numpy().reshape(self.vlv_input_shape)
 		# calculate valve state as 0 = off or 1 = on
-		valve_state =  np.argmax(self.vlv_model.predict(vlv_in_obs, batch_size=1).flatten())
+		with self.graph.as_default():  # pylint: disable=not-context-manager
+			with self.session.as_default():  # pylint: disable=not-context-manager
+				valve_state =  np.argmax(self.vlv_model.predict(vlv_in_obs, batch_size=1).flatten())
 
 		"""heating energy prediction only if valve is on = 1"""
 		if valve_state == 1:
@@ -316,7 +326,9 @@ class Env(gym.Env):
 			# convert to array and reshape
 			hwe_in_obs = hwe_in_obs.to_numpy().reshape(self.hwe_input_shape)
 			# calculate heating energy
-			heating_energy =  float(self.hwe_model.predict(hwe_in_obs, batch_size=1).flatten())
+			with self.graph.as_default():  # pylint: disable=not-context-manager
+				with self.session.as_default():  # pylint: disable=not-context-manager
+					heating_energy =  float(self.hwe_model.predict(hwe_in_obs, batch_size=1).flatten())
 		else:
 			heating_energy = 0.0
 

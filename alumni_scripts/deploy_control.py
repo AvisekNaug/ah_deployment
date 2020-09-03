@@ -15,6 +15,7 @@ from shutil import copyfile
 
 import warnings
 with warnings.catch_warnings():
+	import tensorflow as tf
 	from stable_baselines import PPO2
 	from alumni_scripts import data_process as dp
 	from alumni_scripts import alumni_data_utils as a_utils
@@ -50,10 +51,15 @@ def deploy_control(*args, **kwargs):
 		not_first_loop = False
 		period = kwargs['period']
 
+		graph = tf.Graph()
+		session = tf.Session(graph=graph)
+
 		# an initial trained model has to exist
 		if agent_weights_available.is_set():
 			with agent_weights_lock:
-				rl_agent = PPO2.load(kwargs['best_rl_agent_path'])
+				with graph.as_default():  # pylint: disable=not-context-manager
+					with session.as_default():  # pylint: disable=not-context-manager
+						rl_agent = PPO2.load(kwargs['best_rl_agent_path'])
 			agent_weights_available.clear()
 			log.info('Deploy Control Module: Controller Weights Read from offline phase')
 		else:
@@ -83,12 +89,16 @@ def deploy_control(*args, **kwargs):
 			# get new agent model in case it is available
 			if agent_weights_available.is_set():
 				with agent_weights_lock:
-					rl_agent.load_parameters(kwargs['best_rl_agent_path'])
+					with graph.as_default():  # pylint: disable=not-context-manager
+						with session.as_default():  # pylint: disable=not-context-manager
+							rl_agent.load_parameters(kwargs['best_rl_agent_path'])
 				agent_weights_available.clear()
 				log.info('Deploy Control Module: Controller Weights Adapted')
 
 			# predict new delta and add it to new temp var for next loop check
-			stpt_delta = rl_agent.predict(curr_obs_scaled)
+			with graph.as_default():  # pylint: disable=not-context-manager
+					with session.as_default():  # pylint: disable=not-context-manager
+						stpt_delta = rl_agent.predict(curr_obs_scaled)
 			log.info('Deploy Control Module: Current SetPoint: {}'.format(curr_obs_unscaled[-1]))
 			log.info('Deploy Control Module: Suggested Delta: {}'.format(stpt_delta[0][0]))
 			stpt_unscaled[0] = curr_obs_unscaled[-1] + float(stpt_delta[0])  # stpt_unscaled[0] 

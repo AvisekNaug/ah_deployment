@@ -13,7 +13,7 @@ from datetime import datetime
 import json
 import warnings
 import time
-from datetime import timedelta
+from datetime import datetime, timedelta
 import gc
 
 # ------------From Ibrahim's controller.py script
@@ -58,7 +58,7 @@ if __name__ == "__main__":
 		# interval num for relearning : look at logs/Interval{} and write next number to prevent overwrite
 		interval = 1
 		# how to set relearning interval
-		relearn_interval_kwargs = {'days':0, 'hours':0, 'minutes':15, 'seconds':0}
+		relearn_interval_kwargs = {'days':0, 'hours':0, 'minutes':10, 'seconds':0}
 		# weeks to look back into for retraining
 		retrain_range_weeks = 15
 		# weeks to train rl on 
@@ -89,21 +89,21 @@ if __name__ == "__main__":
 		# path to saved agent weights
 		best_rl_agent_path = 'models/best_rl_agent'
 
-		if not path.exists(cwe_data):
-			utils.make_dirs(cwe_data)  # prevent data overwrite from offline exps
-		if not path.exists(hwe_data):
-			utils.make_dirs(hwe_data)  # prevent data overwrite from offline exps
-		if not path.exists(vlv_data):
-			utils.make_dirs(vlv_data)  # prevent data overwrite from offline exps
-		if not path.exists(env_data):
-			utils.make_dirs(env_data)  # prevent data overwrite from offline exps
+		#if not path.exists(cwe_data):
+		utils.make_dirs(cwe_data)  # prevent data overwrite from offline exps
+		#if not path.exists(hwe_data):
+		utils.make_dirs(hwe_data)  # prevent data overwrite from offline exps
+		#if not path.exists(vlv_data):
+		utils.make_dirs(vlv_data)  # prevent data overwrite from offline exps
+		#if not path.exists(env_data):
+		utils.make_dirs(env_data)  # prevent data overwrite from offline exps
 		if not path.exists(model_path):
 			utils.make_dirs(model_path)  # prevent data overwrite from offline exps
 		# if not path.exists(log_path):
 		utils.make_dirs(log_path)  # prevent data overwrite from offline exps
-		utils.make_dirs(results)
-		if not path.exists(rl_perf_data):
-			utils.make_dirs(rl_perf_data)  # prevent data overwrite from offline exps
+		#utils.make_dirs(results)
+		# if not path.exists(rl_perf_data):
+		utils.make_dirs(rl_perf_data)  # prevent data overwrite from offline exps
 		# utils.make_dirs(trend_data)
 
 		exp_params['cwe_model_config'] = {
@@ -179,14 +179,15 @@ if __name__ == "__main__":
 		log.info("Main Thread: Deployment Thread Started")
 		deploy_ctrl_th.start()
 
-		while not end_learning.set():
+
+		while not end_learning.is_set():
 
 			try:
+				last_relearn_time = datetime.now()
 				data_gen_th = Thread(target=datagen.online_data_gen, daemon = False,
 									kwargs={'lstm_data_available':lstm_data_available,
 											'end_learning':end_learning,
 											'lstm_train_data_lock':lstm_train_data_lock,
-											'relearn_interval_kwargs':relearn_interval_kwargs,
 											'retrain_range_weeks':retrain_range_weeks,
 											'retrain_range_rl_weeks':retrain_range_rl_weeks,
 											'env_data_available':env_data_available,
@@ -196,8 +197,6 @@ if __name__ == "__main__":
 											'cwe_vars': cwe_vars,
 											'hwe_vars': hwe_vars,
 											'vlv_vars': vlv_vars,
-											'database':'bdx_batch_db',
-											'measurement':'alumni_data_v2',
 											'save_path': save_path,
 											'logger':log,})
 				data_gen_th.start()
@@ -229,22 +228,28 @@ if __name__ == "__main__":
 										'rl_train_steps' : rl_train_steps,
 										'rl_perf_data' : rl_perf_data,
 										'interval' : interval,
-										'online_mode' : online_mode,
-										'reinit_agent' : reinit_agent,
 										'logger':log,})
 				ctrl_learn_th.start()
 
-				log.info('Data Gen, Model Learn, Control Learn threads started')
+				log.info('Main Thread: Data Gen, Model Learn, Control Learn threads started')
 				ctrl_learn_th.join()
 				model_learn_th.join()
 				data_gen_th.join()
-				log.info('Data Gen, Model Learn, Control Learn threads ended')
-
-				# sleep for relearn_interval before next relearn stage
-				time.sleep(timedelta(**relearn_interval_kwargs).seconds)
+				log.info('Main Thread: Data Gen, Model Learn, Control Learn threads ended')
 
 				del data_gen_th, model_learn_th, ctrl_learn_th
+				log.info('Main Thread: Delete threads which have ended')
+
+				# increase interval value for storing rewards
+				interval += 1
+
+				# sleep for relearn_interval before next relearn stage
+				to_sleep = timedelta(**relearn_interval_kwargs)+last_relearn_time-datetime.now()
+				time.sleep(to_sleep.seconds)
+				
+				log.info('Main Thread: Running Garbage collection')
 				gc.collect()
+
 
 			except KeyboardInterrupt:
 				end_learning.set()
