@@ -31,6 +31,8 @@ import multiprocessing
 import psutil
 from shutil import copyfile
 
+import gc
+
 
 def offline_data_gen(*args, **kwargs):
 
@@ -496,6 +498,12 @@ def online_data_gen(*args, **kwargs):
 
 				log.info('OnlineDataGen: Dynamic Model and Gym Env data available')
 
+				del data_gen_process_cwe_th
+				del data_gen_process_hwe_th
+				del data_gen_process_vlv_th
+				del data_gen_process_env_th
+				gc.collect()
+
 				week_num += 1
 				week_num = week_num if week_num%53 != 0 else 1
 				year_num = year_num if week_num!= 1 else year_num+1
@@ -536,11 +544,11 @@ def get_train_data(api_args, meta_data_, retrain_range_weeks, log):
 		# get the dataframe from a csv
 		while True:
 			if not os.path.exists('data/trend_data/alumni_data_train_wbt.csv'):
-				log.info('OnlineDataGen: Start of Wet Bulb Data Calculation; wait 40 s')
-				time.sleep(timedelta(seconds=40).seconds)
+				log.info('OnlineDataGen: Start of Wet Bulb Data Calculation; wait 20 s')
+				time.sleep(timedelta(seconds=20).seconds)
 			else:
-				log.info('OnlineDataGen: Wet Bulb Data Calculation is almost done, wait 40 s')
-				time.sleep(timedelta(seconds=40).seconds) # give some time to finish writing
+				log.info('OnlineDataGen: Wet Bulb Data Calculation is almost done, wait 20 s')
+				time.sleep(timedelta(seconds=20).seconds) # give some time to finish writing
 				break
 
 		df_ = read_csv('data/trend_data/alumni_data_train_wbt.csv', )

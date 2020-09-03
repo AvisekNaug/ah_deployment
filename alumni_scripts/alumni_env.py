@@ -12,6 +12,9 @@ import gym
 from gym import spaces
 from gym.utils import seeding
 
+import warnings
+with warnings.catch_warnings():
+	from keras.models import load_model
 
 class Env(gym.Env):
 
@@ -20,20 +23,23 @@ class Env(gym.Env):
 				 obs_space_vars : list,
 				 action_space_vars : list,
 				 action_space_bounds: list, 
-				 cwe_energy_model, cwe_input_shape, cwe_input_vars,
-				 hwe_energy_model, hwe_input_shape, hwe_input_vars,
-				 vlv_state_model, vlv_input_shape, vlv_input_vars,
+				 cwe_energy_model_path, cwe_input_shape, cwe_input_vars,
+				 hwe_energy_model_path, hwe_input_shape, hwe_input_vars,
+				 vlv_state_model_path, vlv_input_shape, vlv_input_vars,
 				 slicepoint = 12/13,
 				 **kwargs):
+		self.cwe_model = load_model(cwe_energy_model_path)
+		self.hwe_model = load_model(hwe_energy_model_path)
+		self.vlv_model = load_model(vlv_state_model_path)
 
 		self.re_init_env(df,totaldf_stats,
 				 obs_space_vars,
 				 action_space_vars,
 				 action_space_bounds, 
-				 cwe_energy_model, cwe_input_shape, cwe_input_vars,
-				 hwe_energy_model, hwe_input_shape, hwe_input_vars,
-				 vlv_state_model, vlv_input_shape, vlv_input_vars,
-				 slicepoint =slicepoint,
+				 cwe_energy_model_path, cwe_input_shape, cwe_input_vars,
+				 hwe_energy_model_path, hwe_input_shape, hwe_input_vars,
+				 vlv_state_model_path, vlv_input_shape, vlv_input_vars,
+				 slicepoint = slicepoint, first_init = True,
 				 **kwargs)
 
 		'''Begin: standard requirements for interfacing with gym environments'''
@@ -63,10 +69,10 @@ class Env(gym.Env):
 				 obs_space_vars : list,
 				 action_space_vars : list,
 				 action_space_bounds: list, 
-				 cwe_energy_model, cwe_input_shape, cwe_input_vars,
-				 hwe_energy_model, hwe_input_shape, hwe_input_vars,
-				 vlv_state_model, vlv_input_shape, vlv_input_vars,
-				 slicepoint = 12/13,
+				 cwe_energy_model_path, cwe_input_shape, cwe_input_vars,
+				 hwe_energy_model_path, hwe_input_shape, hwe_input_vars,
+				 vlv_state_model_path, vlv_input_shape, vlv_input_vars,
+				 slicepoint = 12/13, first_init = False,
 				 **kwargs):
 		"""Custom method to reinitialize the environment
 		"""
@@ -86,15 +92,18 @@ class Env(gym.Env):
 
 		'''Begin: Requirements for our own environment'''
 		# cwe energy model
-		self.cwe_model = cwe_energy_model
+		if not first_init:
+			self.cwe_model.load_weights(cwe_energy_model_path)
 		self.cwe_input_shape = cwe_input_shape
 		self.cwe_input_vars = cwe_input_vars
 		# hwe energy model
-		self.hwe_model = hwe_energy_model
+		if not first_init:
+			self.hwe_model.load_weights(hwe_energy_model_path)
 		self.hwe_input_shape = hwe_input_shape
 		self.hwe_input_vars = hwe_input_vars
 		# valve state model
-		self.vlv_model = vlv_state_model
+		if not first_init:
+			self.vlv_model.load_weights(vlv_state_model_path)
 		self.vlv_input_shape = vlv_input_shape
 		self.vlv_input_vars = vlv_input_vars
 
@@ -225,8 +234,8 @@ class Env(gym.Env):
 
 		'''Reward for less heating during higher temperatures'''
 		oat_t = s.loc[s.index[0], 'oat']
-		if (oat_t>0.63):  # warm weather > 68F # (95.90-29.10)*0.68 + 29.10; 0.74=78F
-			reward_heating = -40.0*T_rl_disch
+		if (oat_t>0.68):  # warm weather > 68F # (95.90-29.10)*0.68 + 29.10; 0.74=78F
+			reward_heating = -35.0*T_rl_disch
 		else:
 			reward_heating = -1.0*T_rl_disch
 		reward_heating /= 0.01*self.episode_length
