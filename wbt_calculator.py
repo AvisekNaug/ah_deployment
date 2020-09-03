@@ -19,7 +19,7 @@ def calculate_wbt(all_args):
 # convert 
 while True:
 	if path.exists('data/trend_data/alumni_data_train.csv'):
-		time.sleep(timedelta(seconds=40).seconds) # give some time to finish writing
+		time.sleep(timedelta(seconds=20).seconds) # give some time to finish writing
 		df_ = read_csv('data/trend_data/alumni_data_train.csv', )
 		remove('data/trend_data/alumni_data_train.csv')
 		df_ = a_utils.dropNaNrows(df_)

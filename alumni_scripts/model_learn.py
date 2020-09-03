@@ -6,6 +6,7 @@ sys.path.append(os.path.abspath(os.path.join('..')))
 import numpy as np
 from threading import Thread
 from multiprocessing import Event, Lock
+import gc
 
 from source import datamodels as dm
 
@@ -27,6 +28,7 @@ def data_driven_model_learn(*args, **kwargs):
 		# check variables
 		models_created = False
 		eval_interval = 1
+		do_prediction = False
 		# to_break = False
 		# user validation loss or not
 		if kwargs['use_val']:
@@ -48,18 +50,17 @@ def data_driven_model_learn(*args, **kwargs):
 				vlv_model = vlv_type(**kwargs['vlv_model_config'])
 				vlv_model.design(**kwargs['vlv_model_config'])
 				vlv_model.compile()
-				log.info("Dynamic Model Learning Module: Models Initialized")
+				log.info("Dynamic Model Learning Module: Models Initialized/Reinitialized")
 
 				# if models are available from previous offline training
-				if lstm_weights_available.is_set():
-					with lstm_weights_lock:
-						cwe_model.load_weights()
-						hwe_model.load_weights()
-						vlv_model.load_weights()
-					lstm_weights_available.clear()
-					log.info("Dynamic Model Learning Module: Models Loaded from Offline Phase")
+				# if lstm_weights_available.is_set():
+				# 	with lstm_weights_lock:
+				# 		cwe_model.load_weights()
+				# 		hwe_model.load_weights()
+				# 		vlv_model.load_weights()
+				# 	lstm_weights_available.clear()
+				# 	log.info("Dynamic Model Learning Module: Models Loaded from Offline Phase")
 				models_created = True
-				log.info
 
 			# data is available and prev models have been read by env
 			if (lstm_data_available.is_set() & (not lstm_weights_available.is_set())): 
@@ -98,11 +99,17 @@ def data_driven_model_learn(*args, **kwargs):
 					th_cwe_learn.join()
 					th_hwe_learn.join()
 					th_vlv_learn.join()
-					# weights are available
-					lstm_weights_available.set()
-					log.info("Dynamic Model Learning Module: Model Training Finished")
+
+				del th_cwe_learn
+				del th_hwe_learn
+				del th_vlv_learn
+					
+				# weights are available
+				lstm_weights_available.set()
+				log.info("Dynamic Model Learning Module: Model Training Finished")
 
 				"""Prediction"""
+<<<<<<< HEAD
 				# predict on test data cwe
 				cwe_prediction, cwe_target = cwe_model.predict(**{'X_test':X_val_cwe}).flatten(), y_val_cwe.flatten()
 				# save the output
@@ -122,6 +129,39 @@ def data_driven_model_learn(*args, **kwargs):
 				log.info("Dynamic Model Learning Module: Model Prediction Finished")
 				
 				break
+=======
+				if do_prediction:
+					# predict on test data cwe
+					cwe_prediction, cwe_target = cwe_model.predict(**{'X_test':X_val_cwe}).flatten(), y_val_cwe.flatten()
+					# save the output
+					np.save(kwargs['save_path']+'cwe_data/cwe_prediction_interval_{}.npy'.format(eval_interval), cwe_prediction)
+					np.save(kwargs['save_path']+'cwe_data/cwe_target_interval_{}.npy'.format(eval_interval), cwe_target)
+					# predict on test data hwe
+					hwe_prediction, hwe_target = hwe_model.predict(**{'X_test':X_val_hwe}).flatten(), y_val_hwe.flatten()
+					# save the output
+					np.save(kwargs['save_path']+'hwe_data/hwe_prediction_interval_{}.npy'.format(eval_interval), hwe_prediction)
+					np.save(kwargs['save_path']+'hwe_data/hwe_target_interval_{}.npy'.format(eval_interval), hwe_target)
+					# predict on test data vlv
+					vlv_prediction, vlv_target = vlv_model.predict(**{'X_test':X_val_vlv}), y_val_hwe
+					# save the output
+					np.save(kwargs['save_path']+'vlv_data/vlv_pred_interval_{}.npy'.format(eval_interval), vlv_prediction)
+					np.save(kwargs['save_path']+'vlv_data/vlv_target_interval_{}.npy'.format(eval_interval), vlv_target)
+					eval_interval += 1
+					log.info("Dynamic Model Learning Module: Model Prediction Finished")
+
+				"""re-init lstm certanin layers"""
+				# cwe_model.re_init_layers()
+				# hwe_model.re_init_layers()
+				# vlv_model.re_init_layers()
+				# log.info("Dynamic Model Learning Module: Model LSTM Layers Re-initialized")
+
+				""""Delete models and set modes_created to False"""
+				del cwe_model, hwe_model, vlv_model
+				log.info("Dynamic Model Learning Module: Deleted Dynamic Models from prev iteration")
+				models_created = False
+
+				gc.collect()
+>>>>>>> master
 
 	except Exception as e:
 		log.error('Dynamic Model Learning Module: %s', str(e))

@@ -58,9 +58,9 @@ if __name__ == "__main__":
 		# interval num for relearning : look at logs/Interval{} and write next number to prevent overwrite
 		interval = 1
 		# how to set relearning interval
-		relearn_interval_kwargs = {'days':0, 'hours':6, 'minutes':0, 'seconds':0}
+		relearn_interval_kwargs = {'days':0, 'hours':0, 'minutes':15, 'seconds':0}
 		# weeks to look back into for retraining
-		retrain_range_weeks = 20
+		retrain_range_weeks = 15
 		# weeks to train rl on 
 		retrain_range_rl_weeks = 2
 		# use validation loss in lstm or not
@@ -70,7 +70,7 @@ if __name__ == "__main__":
 		# period of data
 		period = 6 # 1 = 5 mins, 6 = 30 mins
 		# num of steps to learn rl in each train method
-		rl_train_steps = int((60/(period*5))*24*7*retrain_range_rl_weeks*150)
+		rl_train_steps = int((60/(period*5))*24*7*retrain_range_rl_weeks*4)
 		# reinitialize agent at the end of every learning iteration
 		reinit_agent = True
 
