@@ -9,6 +9,10 @@ This repo is used to deploy a reinforcement learning controller on the Alumni Ha
 * Controller learning script
 * Off-line controller learning script
 
+## Clone the repo
+
+git clone -b dev_v3 git@github.com:AvisekNaug/ah_deployment.git
+
 
 ## Installation of packages
 
