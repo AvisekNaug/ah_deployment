@@ -120,18 +120,9 @@ def data_driven_model_learn(*args, **kwargs):
 				np.save(kwargs['save_path']+'vlv_data/vlv_target_interval_{}.npy'.format(eval_interval), vlv_target)
 				eval_interval += 1
 				log.info("Dynamic Model Learning Module: Model Prediction Finished")
-
-				"""re-init lstm certanin layers"""
-				cwe_model.re_init_layers()
-				hwe_model.re_init_layers()
-				vlv_model.re_init_layers()
-				log.info("Dynamic Model Learning Module: Model LSTM Layers Re-initialized")
 				
-				# if no more learning is needed end this thread
-				# if to_break:
-				# 	break
-				# if end_learning.is_set():  # break after the next loop
-				# 	to_break = True
+				break
+
 	except Exception as e:
 		log.error('Dynamic Model Learning Module: %s', str(e))
 		log.debug(e, exc_info=True)

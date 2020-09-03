@@ -417,8 +417,6 @@ def online_data_gen(*args, **kwargs):
 		lstm_train_data_lock : Lock = kwargs['lstm_train_data_lock']  # prevent dataloop from writing data
 		env_train_data_lock : Lock = kwargs['env_train_data_lock']  # prevent dataloop from writing data  # pylint: disable=unused-variable
 
-		# relearn interval in date time format- first relearn happends fast
-		relearn_interval_kwargs = {'days':0, 'hours':0, 'minutes':0, 'seconds':0}  # eg {'days':6, 'hours':23, 'minutes':50, 'seconds':0}
 		# retrain range in weeks
 		retrain_range_weeks = kwargs['retrain_range_weeks']
 		# rl retrain weeks
@@ -439,8 +437,7 @@ def online_data_gen(*args, **kwargs):
 			# condition 1 : data availability -- set to True to be always satisifed
 			data_unavailable = not (lstm_data_available.is_set() | env_data_available.is_set())
 			# condition 2 : interval satisfied -- set to True to be always satisifed
-			interval_completed = (datetime.now()-last_train_time) > timedelta(**relearn_interval_kwargs)
-			relearn_interval_kwargs = kwargs['relearn_interval_kwargs']
+			interval_completed = True
 			# condition 3 : some error is crossing a threshold -- set to True to be always satisifed
 			error_trigger = True
 			# condition 4 : some reward measure is crossing a threshold -- set to True to be always satisifed
@@ -500,10 +497,9 @@ def online_data_gen(*args, **kwargs):
 				week_num = week_num if week_num%53 != 0 else 1
 				year_num = year_num if week_num!= 1 else year_num+1
 
-			# else:	
-				# sleep for 5 minutes to prevent fast loops in case relearn interval is large and 
-				# other conditions have not been satisfied
-				# time.sleep(timedelta(minutes=1).seconds)
+				# break while loop once data is generated
+				break
+
 	except Exception as e:
 		log.error('On-Line Data Generator Module: %s', str(e))
 		log.debug(e, exc_info=True)
@@ -550,28 +546,6 @@ def get_train_data(api_args, meta_data_, retrain_range_weeks, log):
 		df_['time'] = df_['time'].apply(lambda x: x.astimezone(to_zone)) # convert time to loca timezones
 		df_.set_index(keys='time',inplace=True, drop = True)
 		df_ = a_utils.dropNaNrows(df_)
-
-		# add wet bulb temperature to the data
-		#log.info('OnlineDataGen: Start of Wet Bulb Data Calculation')
-		#rh = df_['WeatherDataProfile humidity']/100
-		#rh = rh.to_numpy()
-		#t_db = 5*(df_['AHU_1 outdoorAirTemp']-32)/9 + 273.15
-		#t_db = t_db.to_numpy()
-
-		# tdb_rh = np.concatenate((t_db.reshape(-1,1), rh.reshape(-1,1)), axis=1)
-		# chunks = [ (sub_arr[:, 0].flatten(), sub_arr[:, 1].flatten(), cpu_id)
-		# 			for cpu_id, sub_arr in enumerate(np.array_split(tdb_rh, multiprocessing.cpu_count(), axis=0))]
-		# pool = multiprocessing.Pool()
-		# individual_results = pool.map(calculate_wbt, chunks)
-		# # Freeing the workers:
-		# pool.close()
-		# pool.join()
-		# T = np.concatenate(individual_results)
-
-		#T = HAPropsSI('T_wb','R',rh,'T',t_db,'P',101325)
-		#t_f = 9*(T-273.15)/5 + 32
-		#df_['wbt'] = t_f
-		# log.info('OnlineDataGen: Wet Bulb Data Calculated')
 
 		# rename the columns
 		new_names = []

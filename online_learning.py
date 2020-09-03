@@ -12,6 +12,9 @@ from threading import Thread
 from datetime import datetime
 import json
 import warnings
+import time
+from datetime import timedelta
+import gc
 
 # ------------From Ibrahim's controller.py script
 import sys
@@ -162,6 +165,7 @@ if __name__ == "__main__":
 		agg = meta_data_['column_agg_type']
 		scaler = a_utils.dataframescaler(meta_data_['column_stats_half_hour'])
 		log.info("------------Main Thread: Online Loop Started------------------")
+
 		deploy_ctrl_th = Thread(target=dctrl.deploy_control, daemon = False,
 							kwargs={'agent_weights_available' : agent_weights_available,
 									'agent_weights_lock' : agent_weights_lock,
@@ -172,71 +176,84 @@ if __name__ == "__main__":
 									'period' : period,
 									'end_learning': end_learning,
 									'logger':log,})
+		log.info("Main Thread: Deployment Thread Started")
 		deploy_ctrl_th.start()
 
-		data_gen_th = Thread(target=datagen.online_data_gen, daemon = False,
-							kwargs={'lstm_data_available':lstm_data_available,
-									'end_learning':end_learning,
-									'lstm_train_data_lock':lstm_train_data_lock,
-									'relearn_interval_kwargs':relearn_interval_kwargs,
-									'retrain_range_weeks':retrain_range_weeks,
-									'retrain_range_rl_weeks':retrain_range_rl_weeks,
-									'env_data_available':env_data_available,
-									'env_train_data_lock':env_train_data_lock,
-									'agg' : agg,
-									'scaler' : scaler,
-									'cwe_vars': cwe_vars,
-									'hwe_vars': hwe_vars,
-									'vlv_vars': vlv_vars,
-									'database':'bdx_batch_db',
-									'measurement':'alumni_data_v2',
-									'save_path': save_path,
-									'logger':log,})
-		data_gen_th.start()
+		while not end_learning.set():
 
-		model_learn_th = Thread(target=mdlearn.data_driven_model_learn, daemon = False,
-							kwargs={'lstm_data_available':lstm_data_available,
-									'end_learning':end_learning,
-									'lstm_train_data_lock':lstm_train_data_lock,
-									'lstm_weights_lock':lstm_weights_lock,
-									'lstm_weights_available':lstm_weights_available,
-									'cwe_model_config':exp_params['cwe_model_config'],
-									'hwe_model_config':exp_params['hwe_model_config'],
-									'vlv_model_config':exp_params['vlv_model_config'],
-									'save_path': save_path,
-									'logger':log,
-									'use_val':use_val})
-		model_learn_th.start()
+			try:
+				data_gen_th = Thread(target=datagen.online_data_gen, daemon = False,
+									kwargs={'lstm_data_available':lstm_data_available,
+											'end_learning':end_learning,
+											'lstm_train_data_lock':lstm_train_data_lock,
+											'relearn_interval_kwargs':relearn_interval_kwargs,
+											'retrain_range_weeks':retrain_range_weeks,
+											'retrain_range_rl_weeks':retrain_range_rl_weeks,
+											'env_data_available':env_data_available,
+											'env_train_data_lock':env_train_data_lock,
+											'agg' : agg,
+											'scaler' : scaler,
+											'cwe_vars': cwe_vars,
+											'hwe_vars': hwe_vars,
+											'vlv_vars': vlv_vars,
+											'database':'bdx_batch_db',
+											'measurement':'alumni_data_v2',
+											'save_path': save_path,
+											'logger':log,})
+				data_gen_th.start()
 
-		ctrl_learn_th = Thread(target=ctlearn.controller_learn, daemon = False,
-							kwargs={
-								'env_config':exp_params['env_config'],
-								'env_data_available' : env_data_available,
-								'lstm_weights_available' : lstm_weights_available,
-								'agent_weights_available' : agent_weights_available,
-								'end_learning':end_learning,
-								'env_train_data_lock' : env_train_data_lock,
-								'lstm_weights_lock' : lstm_weights_lock,
-								'agent_weights_lock' : agent_weights_lock,
-								'rl_train_steps' : rl_train_steps,
-								'rl_perf_data' : rl_perf_data,
-								'interval' : interval,
-								'online_mode' : online_mode,
-								'reinit_agent' : reinit_agent,
-								'logger':log,})
-		ctrl_learn_th.start()
+				model_learn_th = Thread(target=mdlearn.data_driven_model_learn, daemon = False,
+									kwargs={'lstm_data_available':lstm_data_available,
+											'end_learning':end_learning,
+											'lstm_train_data_lock':lstm_train_data_lock,
+											'lstm_weights_lock':lstm_weights_lock,
+											'lstm_weights_available':lstm_weights_available,
+											'cwe_model_config':exp_params['cwe_model_config'],
+											'hwe_model_config':exp_params['hwe_model_config'],
+											'vlv_model_config':exp_params['vlv_model_config'],
+											'save_path': save_path,
+											'logger':log,
+											'use_val':use_val})
+				model_learn_th.start()
 
-		try:
-			log.info('All four threads started')
-			ctrl_learn_th.join()
-			model_learn_th.join()
-			data_gen_th.join()
-			deploy_ctrl_th.join()
-		except KeyboardInterrupt:
-			end_learning.set()
-			log.info('Safely exiting')
+				ctrl_learn_th = Thread(target=ctlearn.controller_learn, daemon = False,
+									kwargs={
+										'env_config':exp_params['env_config'],
+										'env_data_available' : env_data_available,
+										'lstm_weights_available' : lstm_weights_available,
+										'agent_weights_available' : agent_weights_available,
+										'end_learning':end_learning,
+										'env_train_data_lock' : env_train_data_lock,
+										'lstm_weights_lock' : lstm_weights_lock,
+										'agent_weights_lock' : agent_weights_lock,
+										'rl_train_steps' : rl_train_steps,
+										'rl_perf_data' : rl_perf_data,
+										'interval' : interval,
+										'online_mode' : online_mode,
+										'reinit_agent' : reinit_agent,
+										'logger':log,})
+				ctrl_learn_th.start()
+
+				log.info('Data Gen, Model Learn, Control Learn threads started')
+				ctrl_learn_th.join()
+				model_learn_th.join()
+				data_gen_th.join()
+				log.info('Data Gen, Model Learn, Control Learn threads ended')
+
+				# sleep for relearn_interval before next relearn stage
+				time.sleep(timedelta(**relearn_interval_kwargs).seconds)
+
+				del data_gen_th, model_learn_th, ctrl_learn_th
+				gc.collect()
+
+			except KeyboardInterrupt:
+				end_learning.set()
+				log.info('Exiting relearn loop')
+				
+		deploy_ctrl_th.join()
+		log.info('Exiting deployment thread')
 	
 	except Exception as e:
-		log.critical('Could not launch script:\n%s', str(e))
+		log.critical('Script stopped due to:\n%s', str(e))
 		log.debug(e, exc_info=True)
 		exit(-1)
