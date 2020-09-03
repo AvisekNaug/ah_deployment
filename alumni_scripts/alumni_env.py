@@ -243,7 +243,7 @@ class Env(gym.Env):
 		if (oat_t>0.68):  # warm weather > 68F # (95.90-29.10)*0.68 + 29.10; 0.74=78F
 			reward_heating = -35.0*T_rl_disch
 		else:
-			reward_heating = -1.0*T_rl_disch
+			reward_heating = -5.0*T_rl_disch
 		reward_heating /= 0.01*self.episode_length
 
 		# TODO: Create error component

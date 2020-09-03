@@ -27,3 +27,7 @@ dashreq.txt
 sorted.py
 alumni_data_train.csv
 alumni_data_deployment.csv
+deploy_log.txt
+relearn_log.txt
+try.py
+try2.py
