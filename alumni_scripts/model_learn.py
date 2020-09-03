@@ -109,27 +109,6 @@ def data_driven_model_learn(*args, **kwargs):
 				log.info("Dynamic Model Learning Module: Model Training Finished")
 
 				"""Prediction"""
-<<<<<<< HEAD
-				# predict on test data cwe
-				cwe_prediction, cwe_target = cwe_model.predict(**{'X_test':X_val_cwe}).flatten(), y_val_cwe.flatten()
-				# save the output
-				np.save(kwargs['save_path']+'cwe_data/cwe_prediction_interval_{}.npy'.format(eval_interval), cwe_prediction)
-				np.save(kwargs['save_path']+'cwe_data/cwe_target_interval_{}.npy'.format(eval_interval), cwe_target)
-				# predict on test data hwe
-				hwe_prediction, hwe_target = hwe_model.predict(**{'X_test':X_val_hwe}).flatten(), y_val_hwe.flatten()
-				# save the output
-				np.save(kwargs['save_path']+'hwe_data/hwe_prediction_interval_{}.npy'.format(eval_interval), hwe_prediction)
-				np.save(kwargs['save_path']+'hwe_data/hwe_target_interval_{}.npy'.format(eval_interval), hwe_target)
-				# predict on test data vlv
-				vlv_prediction, vlv_target = vlv_model.predict(**{'X_test':X_val_vlv}), y_val_hwe
-				# save the output
-				np.save(kwargs['save_path']+'vlv_data/vlv_pred_interval_{}.npy'.format(eval_interval), vlv_prediction)
-				np.save(kwargs['save_path']+'vlv_data/vlv_target_interval_{}.npy'.format(eval_interval), vlv_target)
-				eval_interval += 1
-				log.info("Dynamic Model Learning Module: Model Prediction Finished")
-				
-				break
-=======
 				if do_prediction:
 					# predict on test data cwe
 					cwe_prediction, cwe_target = cwe_model.predict(**{'X_test':X_val_cwe}).flatten(), y_val_cwe.flatten()
@@ -161,7 +140,6 @@ def data_driven_model_learn(*args, **kwargs):
 				models_created = False
 
 				gc.collect()
->>>>>>> master
 
 	except Exception as e:
 		log.error('Dynamic Model Learning Module: %s', str(e))
