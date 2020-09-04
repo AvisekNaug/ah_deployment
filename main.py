@@ -15,7 +15,7 @@ import warnings
 import time
 from datetime import datetime, timedelta
 import gc
-
+from argparse import ArgumentParser
 import subprocess
 
 # ------------From Ibrahim's controller.py script
@@ -39,10 +39,13 @@ with warnings.catch_warnings():
 	from alumni_scripts import alumni_data_utils as a_utils
 	from source import utils
 
+parser = ArgumentParser(description='Main script for Alumni Hall RL controlelr')
+parser.add_argument('--oat_th', '-o', type=float, default=0.66, help=('threshold for oat'))
+
 if __name__ == "__main__":
 	
 	try:
-
+		args = parser.parse_args()
 		# ------------From Ibrahim's controller.py script
 		# Specifing the log file name
 		_logfile_handler = logging.FileHandler(filename='deploy_log.txt')
@@ -134,7 +137,7 @@ if __name__ == "__main__":
 				last_relearn_time = datetime.now()
 				
 
-				r = subprocess.run(['python', 'online_learning.py','-i', str(interval)])
+				r = subprocess.run(['python', 'online_learning.py', '-i', str(interval), '-o', str(args.oat_th)])
 
 				log.info("Main Thread: Relearn Script Terminated: Agent can try new weights")
 				agent_weights_available.set()

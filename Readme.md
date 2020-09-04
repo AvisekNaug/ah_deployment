@@ -46,12 +46,12 @@ git clone -b dev_v3 git@github.com:AvisekNaug/ah_deployment.git
 
 1. Launching online learning script(Mandatory)
 	```bash
-	$ python online_learning.py
+	$ nohup python main.py -o 0.70 > main.out
 	```
 
 2. Start the script which calculates the wet bulb temperature in a seperate shell(Mandatory)
 	```bash
-	$ python wbt_calculator.py
+	$ nohup python wbt_calculator.py > wbt_calculator.out
 	```
 Step 4 is **not needed** for Alumni Deployment
 

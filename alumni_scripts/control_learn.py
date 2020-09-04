@@ -30,6 +30,8 @@ def controller_learn(*args, **kwargs):
 		lstm_weights_available : Event = kwargs['lstm_weights_available']  # lstm weights are available for alumni env
 		agent_weights_available : Event = kwargs['agent_weights_available']  # deploy loop can read the agent weights now
 		end_learning : Event = kwargs['end_learning']  # to break out of non-stoping learning offline
+		# oat_th
+		oat_th = kwargs['oat_th']
 
 		env_train_data_lock : Lock = kwargs['env_train_data_lock']  # prevent data read/write access
 		lstm_weights_lock : Lock = kwargs['lstm_weights_lock']  # prevent data read/write access
@@ -65,10 +67,10 @@ def controller_learn(*args, **kwargs):
 				
 				"""Arguments to be fed to the custom environment inside make_vec_env"""
 				reward_params = {'energy_saved': 100.0, 'energy_savings_thresh': 0.0,
-								'energy_penalty': -100.0, 'energy_reward_weight': 0.6,
+								'energy_penalty': -100.0, 'energy_reward_weight': 0.1,
 								'comfort': 10, 'comfort_thresh': 0.10,
-								'uncomfortable': 10, 'comfort_reward_weight': 0.2,
-								'heating_reward_weight':0.2,
+								'uncomfortable': 10, 'comfort_reward_weight': 0.1,
+								'heating_reward_weight':0.1,
 								'action_minmax':[np.array([65]), np.array([72])]
 								}
 				env_kwargs = dict(  #  Optional keyword argument to pass to the env constructor
@@ -90,6 +92,8 @@ def controller_learn(*args, **kwargs):
 					vlv_state_model_path=vlv_energy_model_path,
 					vlv_input_vars=kwargs['env_config']['vlv_inputs'],
 					vlv_input_shape=(1, 1, len(kwargs['env_config']['vlv_inputs'])),
+
+					oat_th=oat_th,
 
 					**reward_params  # the reward adjustment parameters
 				)

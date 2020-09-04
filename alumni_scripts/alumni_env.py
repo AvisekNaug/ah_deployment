@@ -27,7 +27,7 @@ class Env(gym.Env):
 				 cwe_energy_model_path, cwe_input_shape, cwe_input_vars,
 				 hwe_energy_model_path, hwe_input_shape, hwe_input_vars,
 				 vlv_state_model_path, vlv_input_shape, vlv_input_vars,
-				 slicepoint = 12/13,
+				 oat_th, slicepoint = 12/13,
 				 **kwargs):
 
 		self.graph = tf.Graph()
@@ -37,6 +37,8 @@ class Env(gym.Env):
 				self.cwe_model = load_model(cwe_energy_model_path)
 				self.hwe_model = load_model(hwe_energy_model_path)
 				self.vlv_model = load_model(vlv_state_model_path)
+
+		self.oat_th = oat_th
 
 		self.re_init_env(df,totaldf_stats,
 				 obs_space_vars,
@@ -240,10 +242,10 @@ class Env(gym.Env):
 
 		'''Reward for less heating during higher temperatures'''
 		oat_t = s.loc[s.index[0], 'oat']
-		if (oat_t>0.68):  # warm weather > 68F # (95.90-29.10)*0.68 + 29.10; 0.74=78F
-			reward_heating = -35.0*T_rl_disch
+		if (oat_t>self.oat_th):  # warm weather > 68F # (95.90-29.10)*0.68 + 29.10; 0.74=78F
+			reward_heating = -45.0*T_rl_disch
 		else:
-			reward_heating = -5.0*T_rl_disch
+			reward_heating = -10.0*T_rl_disch
 		reward_heating /= 0.01*self.episode_length
 
 		# TODO: Create error component

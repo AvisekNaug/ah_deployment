@@ -43,6 +43,8 @@ with warnings.catch_warnings():
 parser = ArgumentParser(description='Run Alumni Hall controller in a loop with relearning.')
 parser.add_argument('--interval', '-i', type=int, default=1,
                     help=('Relearning Iteration'))
+parser.add_argument('--oat_th', '-o', type=float, default=0.66,
+                    help=('threshold for oat'))
 
 
 if __name__ == "__main__":
@@ -67,10 +69,13 @@ if __name__ == "__main__":
 		if interval==1:
 			log_path = 'logs/'
 			utils.make_dirs(log_path)
+		# oat threshold
+		oat_th = args.oat_th
+		log.info('Relearning Main Thread: A Threshold of {} will be used'.format(oat_th))
 		# weeks to look back into for retraining
 		retrain_range_weeks = 15
 		# weeks to train rl on 
-		retrain_range_rl_weeks = 4
+		retrain_range_rl_weeks = 2
 		# use validation loss in lstm or not
 		use_val = True
 		# number of epochs to train dynamic models
@@ -78,7 +83,7 @@ if __name__ == "__main__":
 		# period of data
 		period = 6 # 1 = 5 mins, 6 = 30 mins
 		# num of steps to learn rl in each train method
-		rl_train_steps = int((60/(period*5))*24*7*retrain_range_rl_weeks*80)
+		rl_train_steps = int((60/(period*5))*24*7*retrain_range_rl_weeks*120)
 
 		save_path = 'tmp/'
 		model_path = 'models/'
@@ -193,6 +198,7 @@ if __name__ == "__main__":
 								'rl_train_steps' : rl_train_steps,
 								'rl_perf_data' : rl_perf_data,
 								'interval' : interval,
+								'oat_th':oat_th,
 								'logger':log,})
 		ctrl_learn_th.start()
 
