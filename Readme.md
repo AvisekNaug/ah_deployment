@@ -13,10 +13,6 @@ This repo is used to deploy a reinforcement learning controller on the Alumni Ha
 
 git clone -b dev_v3 git@github.com:AvisekNaug/ah_deployment.git
 
-## Installation via miniconda
-conda env create -f environment.yml
-
-
 ## Installation of packages
 
 1. Create virtual environment using (**Optional** but recommended step: This will have a clean and separate installation procedure for python packages that will not mess with existing applications in the server where it will run)
@@ -26,7 +22,9 @@ conda env create -f environment.yml
 	```
 	("python3 -m venv alumni_v2" might generate an error/warning on some Linux systems and it means an additional prerequisite needs to be fulfilled. I don't remember the exact details of the error as it has been a long time but in case it arises please get back to me with the error log and I will try to send out the fix.)
 
-2. Install all requirements
+2. sudo apt-get update && sudo apt-get install cmake libopenmpi-dev zlib1g-dev
+
+3. Install all requirements
 	```bash
 	$ pip install -r requirements.txt
 	```
@@ -35,7 +33,7 @@ conda env create -f environment.yml
 	$ pip3 install -r requirements.txt
 	```
 
-3. Exit the environment(**Only** to be done in case step 1 has been followed):
+4. Exit the environment(**Only** to be done in case step 1 has been followed):
 	```bash
 	$ deactivate
 	```
