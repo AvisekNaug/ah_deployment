@@ -13,6 +13,9 @@ This repo is used to deploy a reinforcement learning controller on the Alumni Ha
 
 git clone -b dev_v3 git@github.com:AvisekNaug/ah_deployment.git
 
+## Installation via miniconda
+conda env create -f environment.yml
+
 
 ## Installation of packages
 
