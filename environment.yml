@@ -1,0 +1,15 @@
+name: alumni_v2
+dependencies:
+  - python=3.6.8
+  - tensorflow_gpu=1.14.0
+  - pandas=1.0.1
+  - Keras=2.2.4
+  - scipy=1.4.1
+  - matplotlib=3.2.1
+  - scikit_learn=0.23.1
+  - stable_baselines=2.10.0
+  - pip
+  - pip:
+    - CoolProp
+    - gym
+    - git+https://git.isis.vanderbilt.edu/SmartBuildings/bdx.git@v0.2.5
