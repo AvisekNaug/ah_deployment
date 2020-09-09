@@ -22,15 +22,29 @@ git clone -b dev_v3 git@github.com:AvisekNaug/ah_deployment.git
 	```
 	("python3 -m venv alumni_v2" might generate an error/warning on some Linux systems and it means an additional prerequisite needs to be fulfilled. I don't remember the exact details of the error as it has been a long time but in case it arises please get back to me with the error log and I will try to send out the fix.)
 
-2. sudo apt-get update && sudo apt-get install cmake libopenmpi-dev zlib1g-dev
+2. Install necessary packages: 
+
+	i. **On Ubuntu** : sudo apt-get update && sudo apt-get install cmake libopenmpi-dev python3-dev zlib1g-dev
+
+	ii. **On Centos** : yum install -y cmake openmpi-devel zlib-devel mesa-libGL-devel
+
+	Also **on Censtos** depending on your python verion you have to do : ```yum install -y python3X-devel``` where is X is 6,7,8 etc. Note the last ```yum search python3*X*-devel``` only provides devel for version .6 nd 3.8. So please make sure you have python with eiter version 3.6 or 3.8
+
 
 3. Install all requirements
+
+	**For Ubuntu OS**:
 	```bash
 	$ pip install -r requirements.txt
 	```
 	or depending on your system,
 	```bash
 	$ pip3 install -r requirements.txt
+	```
+	
+	**For Debian OS**:
+	```bash
+	env MPICC=/usr/lib64/openmpi/bin/mpicc pip install -r requirements.txt
 	```
 
 4. Exit the environment(**Only** to be done in case step 1 has been followed):
