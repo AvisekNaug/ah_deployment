@@ -100,6 +100,13 @@ def deploy_control(*args, **kwargs):
 					with session.as_default():  # pylint: disable=not-context-manager
 						stpt_delta = rl_agent.predict(curr_obs_scaled)
 			log.info('Deploy Control Module: Current SetPoint: {}'.format(curr_obs_unscaled[-1]))
+			# add some exploration
+			if curr_obs_unscaled[-1]<65.5:
+				stpt_delta[0][0] += np.random.normal(1.9,0.80)
+			elif curr_obs_unscaled[-1]>70.0:
+				stpt_delta[0][0] -= np.random.normal(1.9,0.80)
+			else:
+				stpt_delta[0][0] -= np.random.normal(0.1,0.1)
 			log.info('Deploy Control Module: Suggested Delta: {}'.format(stpt_delta[0][0]))
 			stpt_unscaled[0] = curr_obs_unscaled[-1] + float(stpt_delta[0])  # stpt_unscaled[0] 
 			# clip it in case it crosses a range
