@@ -24,9 +24,9 @@ git clone -b dev_v3 git@github.com:AvisekNaug/ah_deployment.git
 
 2. Install necessary packages: 
 
-	i. **On Ubuntu** : sudo apt-get update && sudo apt-get install cmake libopenmpi-dev python3-dev zlib1g-dev
+	i. **On Ubuntu** : ```sudo apt-get update && sudo apt-get install cmake libopenmpi-dev python3-dev zlib1g-dev```
 
-	ii. **On Centos** : yum install -y cmake openmpi-devel zlib-devel mesa-libGL-devel
+	ii. **On Centos** : ```yum install -y cmake openmpi-devel zlib-devel mesa-libGL-devel```
 
 	Also **on Censtos** depending on your python verion you have to do : ```yum install -y python3X-devel``` where is X is 6,7,8 etc. Note the last ```yum search python3*X*-devel``` only provides devel for version .6 nd 3.8. So please make sure you have python with eiter version 3.6 or 3.8
 
