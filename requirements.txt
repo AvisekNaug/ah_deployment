@@ -8,6 +8,5 @@ pandas==1.0.1
 Keras==2.2.4
 scipy==1.4.1
 matplotlib==3.2.1
-plotly==4.8.2
 CoolProp==6.4.0
 scikit_learn==0.23.1
