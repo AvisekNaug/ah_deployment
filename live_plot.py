@@ -73,7 +73,12 @@ def update_graph_scatter(_):
 if __name__ == '__main__':
     # from waitress import serve
     # serve(app, host = '129.59.104.221', port = 8810)
-    app.run_server(debug=False, host = '129.59.104.221', port = 8810)
+
+    app.run_server(debug=True, port = 8810)
+
+    
+    # for waitress uncomment following line
+    # app.run_server(debug=False, host = '129.59.104.221', port = 8810)
 
 # To run as a safe production server, run it as 
 # waitress-serve --host 129.59.104.221 --port 8810 live_plot:app.server

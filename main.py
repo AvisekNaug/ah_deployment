@@ -48,7 +48,7 @@ if __name__ == "__main__":
 		args = parser.parse_args()
 		# ------------From Ibrahim's controller.py script
 		# Specifing the log file name
-		_logfile_handler = logging.FileHandler(filename='deploy_log.txt')
+		_logfile_handler = logging.FileHandler(filename='deploy_log.txt', mode='w')
 		_logfile_handler.setLevel(logging.DEBUG)    # DEBUG is the lowest severity. It means print all messages.
 		_logfile_handler.setFormatter(_formatter)   # Set up the format of log messages
 		log.addHandler(_logfile_handler)            # add this handler to the logger

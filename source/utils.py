@@ -14,3 +14,4 @@ def make_dirs(dir_path):
 				shutil.rmtree(dir_path + f)
 			except NotADirectoryError:
 				os.remove(dir_path + f)
+

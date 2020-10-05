@@ -20,6 +20,7 @@ with warnings.catch_warnings():
 	from alumni_scripts import data_process as dp
 	from alumni_scripts import alumni_data_utils as a_utils
 	from CoolProp.HumidAirProp import HAPropsSI
+	from alumni_scripts.data_process import initial_learning
 
 def deploy_control(*args, **kwargs):
 	"""
@@ -99,6 +100,10 @@ def deploy_control(*args, **kwargs):
 			with graph.as_default():  # pylint: disable=not-context-manager
 					with session.as_default():  # pylint: disable=not-context-manager
 						stpt_delta = rl_agent.predict(curr_obs_scaled)
+			# set initial rounds of imitation learning
+			time_at_prediction = datetime.now()
+			initial_delta = initial_learning(time_at_prediction, curr_obs_unscaled[0], curr_obs_unscaled[-1])
+
 			log.info('Deploy Control Module: Current SetPoint: {}'.format(curr_obs_unscaled[-1]))
 			# add some exploration
 			if curr_obs_unscaled[-1]<65.5:
@@ -106,29 +111,33 @@ def deploy_control(*args, **kwargs):
 			elif curr_obs_unscaled[-1]>70.0:
 				stpt_delta[0][0] -= np.random.normal(1.9,0.80)
 			else:
-				stpt_delta[0][0] -= np.random.normal(0.1,0.1)
-			log.info('Deploy Control Module: Suggested Delta: {}'.format(stpt_delta[0][0]))
-			stpt_unscaled[0] = curr_obs_unscaled[-1] + float(stpt_delta[0])  # stpt_unscaled[0] 
+				stpt_delta[0][0] += np.random.normal(0.1,0.1)
+			# log.info('Deploy Control Module: Suggested Delta: {}'.format(stpt_delta[0][0]))
+			log.info('Deploy Control Module: Suggested Delta: {}'.format(initial_delta[0]))
+			stpt_unscaled[0] = curr_obs_unscaled[-1] + float(initial_delta[0])  # stpt_unscaled[0] 
 			# clip it in case it crosses a range
 			stpt_unscaled = np.clip(stpt_unscaled, np.array([65.0]), np.array([72.0]))
 			# scale it
 			stpt_scaled = scaler.minmax_scale(stpt_unscaled, ['sat_stpt'], ['sat_stpt'])
 
 			# write it to a file for BdX
-			with open('reheat_preheat_setpoint.txt', 'w') as cfile:
-				cfile.seek(0)
-				cfile.write('{}\n'.format(str(stpt_unscaled[0])))
+			# with open('reheat_preheat_setpoint.txt', 'w') as cfile:
+			# 	cfile.seek(0)
+			# 	cfile.write('{}\n'.format(str(stpt_unscaled[0])))
+			# cfile.close()
+			with open('Alumni_SAT_Setpoint.csv', 'w') as cfile:
+				cfile.write('{}'.format(str(stpt_unscaled[0])))
 			cfile.close()
 
 			# write output to file for our use
 			fout = np.concatenate((curr_obs_unscaled, stpt_unscaled, hist_stpt))
 			with open('experience.csv', 'a+') as cfile:
-				cfile.write('{}, {:.4f}, {:.4f}, {:.4f}, {:.4f}, {:.4f}, {:.4f}, {:.4f}\n'.format(datetime.now(), fout[0],
+				cfile.write('{}, {:.4f}, {:.4f}, {:.4f}, {:.4f}, {:.4f}, {:.4f}, {:.4f}\n'.format(time_at_prediction, fout[0],
 				fout[1], fout[2], fout[3], fout[4], fout[5], fout[6]))
 			cfile.close()
 
 			# sleep for 30 mins before next output
-			time.sleep(timedelta(minutes=30).seconds)
+			time.sleep(timedelta(minutes=1).seconds)
 
 	except Exception as e:
 		log.error('Deploy Control Module: %s', str(e))

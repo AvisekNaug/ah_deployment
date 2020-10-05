@@ -139,3 +139,82 @@ def online_data_clean(*args, **kwargs):
 
 	return df
 
+"""
+A time based schedule for optimal control testing of Alumni Hall. It wil help the rl generate some good experiences at initial stages of relearning. Experimental. Stopped after first few rounds of relearning.
+"""
+def initial_learning(time_of_day, oat, prev_setting):
+	"""
+	Cases:
+	* oat>75(24C)
+		- 0<time.hour=<4 -> 65.5+np.random.normal(0.8,0.40)
+		- 4<time.hour=<9 -> 65.0+np.random.normal(0.8,0.40)
+		- 9<time.hour=<18 -> 65.0+np.random.normal(0.8,0.40)
+		- 18<time.hour=<21 -> 65.5+np.random.normal(0.1,0.001)
+		- 21<time.hour=<24 -> 65.5+np.random.normal(0.8,0.40)
+	* 65<oat=<75(18C,24C)
+		- 0<time.hour=<4 -> 65.5+np.random.normal(1.0,0.40)
+		- 4<time.hour=<9 -> 66.5+np.random.normal(0.8,0.40)
+		- 9<time.hour=<18 -> 65.0+np.random.normal(0.8,0.40)
+		- 18<time.hour=<21 -> 66.5+np.random.normal(0.1,0.001)
+		- 21<time.hour=<24 -> 65.5+np.random.normal(1.0,0.40)
+	* 50<oat=<65(10C,18C)
+		- 0<time.hour=<4 -> 67.5+np.random.normal(1.0,0.20)
+		- 4<time.hour=<9 -> 69.0+np.random.normal(0.8,0.20)
+		- 9<time.hour=<18 -> 68.0+np.random.normal(2.0,0.40)
+		- 18<time.hour=<21 -> 68.5+np.random.normal(1.8,0.40)
+		- 21<time.hour=<24 -> 67.5+np.random.normal(1.0,0.20)
+	* oat=<50(10C)
+		- 0<time.hour=<4 -> 68.5+np.random.normal(1.0,0.20)
+		- 6<time.hour=<9 -> 70.0+np.random.normal(0.8,0.20)
+		- 9<time.hour=<18 -> 69.0+np.random.normal(2.0,0.20)
+		- 18<time.hour=<21 -> 68.5+np.random.normal(1.8,0.40)
+		- 21<time.hour=<24 -> 68.5+np.random.normal(1.0,0.20)
+	"""
+	prop_stp = 68.0 + np.random.normal(2.0,0.80)
+	if oat>75.0:  # 24C
+		if (time_of_day.hour<=4) & (time_of_day.hour > 0):
+			prop_stp = 65.5 + np.random.normal(0.8,0.40)
+		if (time_of_day.hour<=9) & (time_of_day.hour > 4):
+			prop_stp = 65.0 + np.random.normal(0.8,0.40)
+		if (time_of_day.hour<=18) & (time_of_day.hour > 9):
+			prop_stp = 65.0 + np.random.normal(0.8,0.40)
+		if (time_of_day.hour<=21) & (time_of_day.hour > 18): 
+			prop_stp = 65.5 + np.random.normal(0.1,0.001)
+		if (time_of_day.hour<=24) & (time_of_day.hour > 21):
+			prop_stp = 65.5 + np.random.normal(0.8,0.40)
+	if (oat<=75.0) & (oat > 65.0):  # (18C,24C)
+		if (time_of_day.hour<=4) & (time_of_day.hour > 0):
+			prop_stp = 65.5+np.random.normal(1.0,0.40)
+		if (time_of_day.hour<=9) & (time_of_day.hour > 4):
+			prop_stp = 66.5+np.random.normal(0.8,0.40)
+		if (time_of_day.hour<=18) & (time_of_day.hour > 9):
+			prop_stp = 65.0+np.random.normal(0.8,0.40)
+		if (time_of_day.hour<=21) & (time_of_day.hour > 18): 
+			prop_stp = 66.5+np.random.normal(0.1,0.001)
+		if (time_of_day.hour<=24) & (time_of_day.hour > 21):
+			prop_stp = 65.5+np.random.normal(1.0,0.40)
+	if (oat<=65.0) & (oat > 50.0):  # (10C,18C)
+		if (time_of_day.hour<=4) & (time_of_day.hour > 0):
+			prop_stp = 67.5+np.random.normal(1.0,0.20)
+		if (time_of_day.hour<=9) & (time_of_day.hour > 4):
+			prop_stp = 69.0+np.random.normal(0.8,0.20)
+		if (time_of_day.hour<=18) & (time_of_day.hour > 9):
+			prop_stp = 68.0+np.random.normal(2.0,0.40)
+		if (time_of_day.hour<=21) & (time_of_day.hour > 18): 
+			prop_stp = 68.5+np.random.normal(1.8,0.40)
+		if (time_of_day.hour<=24) & (time_of_day.hour > 21):
+			prop_stp = 67.5+np.random.normal(1.0,0.20)
+	if (oat<=50.0) :  # (10C)
+		if (time_of_day.hour<=4) & (time_of_day.hour > 0):
+			prop_stp = 68.5+np.random.normal(1.0,0.20)
+		if (time_of_day.hour<=9) & (time_of_day.hour > 4):
+			prop_stp = 70.5+np.random.normal(0.8,0.20)
+		if (time_of_day.hour<=18) & (time_of_day.hour > 9):
+			prop_stp = 69.0+np.random.normal(2.0,0.20)
+		if (time_of_day.hour<=21) & (time_of_day.hour > 18): 
+			prop_stp = 68.5+np.random.normal(1.8,0.40)
+		if (time_of_day.hour<=24) & (time_of_day.hour > 21):
+			prop_stp = 68.5+np.random.normal(1.0,0.20)
+
+	delta_change = np.clip(np.array([prop_stp - prev_setting]),a_min=np.array([-2.0]),a_max=np.array([2.0]))
+	return delta_change

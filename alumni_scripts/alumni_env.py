@@ -225,7 +225,7 @@ class Env(gym.Env):
 			else self.params['energy_penalty']*(-hist_energy+rl_energy)
 		# reward_energy = hist_energy-rl_energy
 		# reward_energy *= self.params['energy_reward_weight']  # don't weight it so that we can try ad hoc weights
-		reward_energy /= 0.01*self.episode_length  # scale reward in case the episode lengths are not equal
+		reward_energy /= self.episode_length  # scale reward in case the episode lengths are not equal
 
 		'''Comfort Reward'''
 		# exrtact rl discharge air temeprature
@@ -238,15 +238,15 @@ class Env(gym.Env):
 			else self.params['uncomfortable']*abs(T_rl_disch-avg_vrf_stpt)
 		# reward_comfort = -1*abs(T_rl_disch-avg_vrf_stpt)
 		# reward_comfort *= self.params['comfort_reward_weight']  # don't weight it so that we can try ad hoc weights
-		reward_comfort /= 0.01*self.episode_length  # scale reward in case the episode lengths are not equal
+		reward_comfort /= self.episode_length  # scale reward in case the episode lengths are not equal
 
 		'''Reward for less heating during higher temperatures'''
 		oat_t = s.loc[s.index[0], 'oat']
 		if (oat_t>self.oat_th):  # warm weather > 68F # (95.90-29.10)*0.68 + 29.10; 0.74=78F
-			reward_heating = -45.0*T_rl_disch
+			reward_heating = -35.0*T_rl_disch
 		else:
-			reward_heating = -10.0*T_rl_disch
-		reward_heating /= 0.01*self.episode_length
+			reward_heating = +15.0*T_rl_disch
+		reward_heating /= self.episode_length
 
 		# TODO: Create error component
 

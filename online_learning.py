@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
 		# ------------From Ibrahim's controller.py script
 		# Specifing the log file name
-		_logfile_handler = logging.FileHandler(filename='relearn_log.txt')
+		_logfile_handler = logging.FileHandler(filename='relearn_log.txt', mode='w')
 		_logfile_handler.setLevel(logging.DEBUG)    # DEBUG is the lowest severity. It means print all messages.
 		_logfile_handler.setFormatter(_formatter)   # Set up the format of log messages
 		log.addHandler(_logfile_handler)            # add this handler to the logger
@@ -83,7 +83,7 @@ if __name__ == "__main__":
 		# period of data
 		period = 6 # 1 = 5 mins, 6 = 30 mins
 		# num of steps to learn rl in each train method
-		rl_train_steps = int((60/(period*5))*24*7*retrain_range_rl_weeks*120)
+		rl_train_steps = int((60/(period*5))*24*7*retrain_range_rl_weeks*60)
 
 		save_path = 'tmp/'
 		model_path = 'models/'
