@@ -41,11 +41,10 @@ with warnings.catch_warnings():
 	from source import utils
 
 parser = ArgumentParser(description='Run Alumni Hall controller in a loop with relearning.')
-parser.add_argument('--interval', '-i', type=int, default=1,
-                    help=('Relearning Iteration'))
-parser.add_argument('--oat_th', '-o', type=float, default=0.66,
-                    help=('threshold for oat'))
-
+parser.add_argument('--interval', '-i', type=int, default=1,help='Relearning Iteration')
+parser.add_argument('--oat_th', '-o', type=float, default=0.66, help='threshold for oat')
+parser.add_argument('--relearn_weeks', '-w', type=int, default=2, help='weeks to look into the past to train rl agent')
+parser.add_argument('--num_of_episodes', '-e', type=int, default=60, help='number of episodes to train')
 
 if __name__ == "__main__":
 	
@@ -75,7 +74,7 @@ if __name__ == "__main__":
 		# weeks to look back into for retraining
 		retrain_range_weeks = 15
 		# weeks to train rl on 
-		retrain_range_rl_weeks = 2
+		retrain_range_rl_weeks = args.relearn_weeks
 		# use validation loss in lstm or not
 		use_val = True
 		# number of epochs to train dynamic models
@@ -83,7 +82,7 @@ if __name__ == "__main__":
 		# period of data
 		period = 6 # 1 = 5 mins, 6 = 30 mins
 		# num of steps to learn rl in each train method
-		rl_train_steps = int((60/(period*5))*24*7*retrain_range_rl_weeks*60)
+		rl_train_steps = int((60/(period*5))*24*7*retrain_range_rl_weeks*args.num_of_episodes)
 
 		save_path = 'tmp/'
 		model_path = 'models/'

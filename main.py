@@ -40,7 +40,12 @@ with warnings.catch_warnings():
 	from source import utils
 
 parser = ArgumentParser(description='Main script for Alumni Hall RL controlelr')
-parser.add_argument('--oat_th', '-o', type=float, default=0.66, help=('threshold for oat'))
+parser.add_argument('--oat_th', '-o', type=float, default=0.72, help='threshold for oat')
+parser.add_argument('--relearn_interval_hours', '-n', type=int, default=168, help='relearning interval')
+parser.add_argument('--relearn_weeks', '-w', type=int, default=2, help='weeks to look into the past to train rl agent')
+parser.add_argument('--num_of_episodes', '-e', type=int, default=60, help='number of episodes to train')
+parser.add_argument('--deploy_interval_mins', '-d', type=int, default=30, help='interval in mins for controller output')
+parser.add_argument('--expert_demo', '-x', type=bool, default=True, help='Use expert heuristics to create some initial data')
 
 if __name__ == "__main__":
 	
@@ -60,7 +65,7 @@ if __name__ == "__main__":
 		# interval num for relearning : look at logs/Interval{} and write next number to prevent overwrite
 		interval = 1
 		# how to set relearning interval
-		relearn_interval_kwargs = {'days':0, 'hours':6, 'minutes':0, 'seconds':0}
+		relearn_interval_kwargs = {'days':0, 'hours':args.relearn_interval_hours, 'minutes':0, 'seconds':0}
 		# period of data
 		period = 6 # 1 = 5 mins, 6 = 30 mins
 
@@ -126,6 +131,8 @@ if __name__ == "__main__":
 									'best_rl_agent_path' : best_rl_agent_path,
 									'period' : period,
 									'end_learning': end_learning,
+									'deploy_interval_mins':args.deploy_interval_mins,
+									'expert_demo':args.expert_demo,
 									'logger':log,})
 		log.info("Main Thread: Deployment Thread Started")
 		deploy_ctrl_th.start()
@@ -137,7 +144,8 @@ if __name__ == "__main__":
 				last_relearn_time = datetime.now()
 				
 
-				r = subprocess.run(['python', 'online_learning.py', '-i', str(interval), '-o', str(args.oat_th)])
+				r = subprocess.run(['python', 'online_learning.py', '-i', str(interval), '-o', str(args.oat_th), \
+					'-w', str(args.relearn_weeks), '-e', str(args.num_of_episodes)])
 
 				log.info("Main Thread: Relearn Script Terminated: Agent can try new weights")
 				agent_weights_available.set()

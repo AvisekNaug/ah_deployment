@@ -51,6 +51,8 @@ def deploy_control(*args, **kwargs):
 		stpt_scaled = scaler.minmax_scale(stpt_unscaled, ['sat'], ['sat'])
 		not_first_loop = False
 		period = kwargs['period']
+		deploy_interval_mins = kwargs['deploy_interval_mins']
+		expert_demo = kwargs['expert_demo']
 
 		graph = tf.Graph()
 		session = tf.Session(graph=graph)
@@ -112,9 +114,16 @@ def deploy_control(*args, **kwargs):
 				stpt_delta[0][0] -= np.random.normal(1.9,0.80)
 			else:
 				stpt_delta[0][0] += np.random.normal(0.1,0.1)
-			# log.info('Deploy Control Module: Suggested Delta: {}'.format(stpt_delta[0][0]))
-			log.info('Deploy Control Module: Suggested Delta: {}'.format(initial_delta[0]))
-			stpt_unscaled[0] = curr_obs_unscaled[-1] + float(initial_delta[0])  # stpt_unscaled[0] 
+
+			final_delta = 0.0
+			if expert_demo:
+				final_delta = initial_delta[0]
+			else:
+				final_delta = stpt_delta[0][0]
+
+			log.info('Deploy Control Module: Suggested Delta: {}'.format(final_delta))
+
+			stpt_unscaled[0] = curr_obs_unscaled[-1] + float(final_delta)
 			# clip it in case it crosses a range
 			stpt_unscaled = np.clip(stpt_unscaled, np.array([65.0]), np.array([72.0]))
 			# scale it
@@ -137,7 +146,7 @@ def deploy_control(*args, **kwargs):
 			cfile.close()
 
 			# sleep for 30 mins before next output
-			time.sleep(timedelta(minutes=1).seconds)
+			time.sleep(timedelta(minutes=deploy_interval_mins).seconds)
 
 	except Exception as e:
 		log.error('Deploy Control Module: %s', str(e))
