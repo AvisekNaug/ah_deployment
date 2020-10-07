@@ -134,7 +134,7 @@ def deploy_control(*args, **kwargs):
 			# 	cfile.seek(0)
 			# 	cfile.write('{}\n'.format(str(stpt_unscaled[0])))
 			# cfile.close()
-			with open('Alumni_SAT_Setpoint.csv', 'w') as cfile:
+			with open('../Alumni_SAT_Setpoint.csv', 'w') as cfile:
 				cfile.write('{}'.format(str(stpt_unscaled[0])))
 			cfile.close()
 
