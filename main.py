@@ -159,7 +159,7 @@ if __name__ == "__main__":
 				# sleep for relearn_interval before next relearn stage
 				to_sleep = timedelta(**relearn_interval_kwargs)+last_relearn_time-datetime.now()
 				log.info('Main Thread: Next Relearn in {} minutes'.format(str(to_sleep)))
-				time.sleep(to_sleep.seconds)
+				time.sleep(to_sleep.total_seconds())
 
 
 			except KeyboardInterrupt:
