@@ -28,7 +28,7 @@ git clone -b dev_v3 git@github.com:AvisekNaug/ah_deployment.git
 
 	ii. **On Centos** : ```yum install -y cmake openmpi-devel zlib-devel mesa-libGL-devel```
 
-	Also **on Censtos** depending on your python verion you have to do : ```yum install -y python3X-devel``` where is X is 6,7,8 etc. Note the last ```yum search python3*X*-devel``` only provides devel for version .6 nd 3.8. So please make sure you have python with eiter version 3.6 or 3.8
+	Also **on Centos** depending on your python verion you have to do : ```yum install -y python3X-devel``` where is X is 6,7,8 etc. Note the last ```yum search python3*X*-devel``` only provides devel for version .6 nd 3.8. So please make sure you have python with eiter version 3.6 or 3.8
 
 
 3. Install all requirements
@@ -42,7 +42,7 @@ git clone -b dev_v3 git@github.com:AvisekNaug/ah_deployment.git
 	$ pip3 install -r requirements.txt
 	```
 	
-	**For Debian OS**:
+	**For Centos 7 OS**:
 	```bash
 	env MPICC=/usr/lib64/openmpi/bin/mpicc pip install -r requirements.txt
 	```
