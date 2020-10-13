@@ -61,7 +61,7 @@ git clone -b dev_v3 git@github.com:AvisekNaug/ah_deployment.git
 
 1. Launching online learning script(Mandatory)
 	```bash
-	$ nohup python main.py -o 0.70 > main.out
+	$ nohup python main.py > main.out
 	```
 
 2. Start the script which calculates the wet bulb temperature in a seperate shell(Mandatory)
