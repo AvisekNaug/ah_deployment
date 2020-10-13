@@ -530,9 +530,17 @@ def get_train_data(api_args, meta_data_, retrain_range_weeks, log):
 
 		# pull the data into csv file
 		try:
-			dp.pull_offline_data(**api_args)
-			copyfile('data/trend_data/alumni_data_train.csv','data/trend_data/alumni_data_train_old.csv')
+			df_p = dp.pull_offline_data(**api_args)
 			log.info('OnlineDataGen: Train Data Obtained using API')
+			df_p.dropna(inplace=True)
+			# check whether relearn data has sufficient rows(at least 10 weeks)
+			min_length = 2016*(retrain_range_weeks-3)
+			if (df_p.empty) | (df_p.shape[0]<min_length):
+				copyfile('data/trend_data/alumni_data_train_old.csv', 'data/trend_data/alumni_data_train.csv')
+				log.info('Deploy Control Module: BdX API data is NaN or very small. Will use backup data')
+			else:
+				df_p.to_csv(api_args['save_path'])
+				copyfile('data/trend_data/alumni_data_train.csv','data/trend_data/alumni_data_train_old.csv')
 		except Exception:
 			copyfile('data/trend_data/alumni_data_train_old.csv', 'data/trend_data/alumni_data_train.csv')
 			log.info('OnlineDataGen: BdX API could not get train data: will resuse old data')
@@ -547,8 +555,10 @@ def get_train_data(api_args, meta_data_, retrain_range_weeks, log):
 				time.sleep(timedelta(seconds=20).seconds) # give some time to finish writing
 				break
 
-		df_ = read_csv('data/trend_data/alumni_data_train_wbt.csv', )
+		df_ = read_csv('data/trend_data/alumni_data_train_wbt.csv')
+		time.sleep(timedelta(seconds=10).seconds)
 		os.remove('data/trend_data/alumni_data_train_wbt.csv')
+		log.info('OnlineDataGen: Wet bulb Augmented Data removed')
 		df_['time'] = to_datetime(df_['time'])
 		to_zone = tz.tzlocal()
 		df_['time'] = df_['time'].apply(lambda x: x.astimezone(to_zone)) # convert time to loca timezones
