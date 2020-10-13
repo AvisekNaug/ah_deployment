@@ -174,7 +174,6 @@ def get_real_obs(api_args: dict, meta_data_: dict, obs_space_vars : list, scaler
 		try:
 			dp.pull_online_data(**api_args)
 			log.info('Deploy Control Module: Deployment Data obtained from API')
-			copyfile('data/trend_data/alumni_data_deployment.csv','data/trend_data/alumni_data_deployment_bakcup.csv')
 		except Exception:
 			log.info('Deploy Control Module: BdX API could not get data: will resuse old data')
 			copyfile('data/trend_data/alumni_data_deployment_bakcup.csv','data/trend_data/alumni_data_deployment.csv')
@@ -187,6 +186,8 @@ def get_real_obs(api_args: dict, meta_data_: dict, obs_space_vars : list, scaler
 			log.info('Deploy Control Module: BdX API data is empty or sparse or has NaN, reusing old data')
 			copyfile('data/trend_data/alumni_data_deployment_bakcup.csv','data/trend_data/alumni_data_deployment.csv')
 			df_ = read_csv('data/trend_data/alumni_data_deployment.csv', )
+		else:
+			copyfile('data/trend_data/alumni_data_deployment.csv','data/trend_data/alumni_data_deployment_bakcup.csv')
 
 		# process data
 		df_['time'] = to_datetime(df_['time'])

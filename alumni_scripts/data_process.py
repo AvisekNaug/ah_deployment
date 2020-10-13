@@ -40,7 +40,7 @@ def pull_offline_data(*args, **kwargs):
 						  start=start,
 						  end=end)
 
-	dataframe.to_csv(kwargs['save_path'])
+	return dataframe  # dataframe.to_csv(kwargs['save_path'])
 
 
 # get data stats from raw data: 
