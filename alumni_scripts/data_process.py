@@ -195,7 +195,7 @@ def initial_learning(time_of_day, oat, prev_setting):
 			prop_stp = 65.5+np.random.normal(1.0,0.35)
 	elif (oat<=66.0) & (oat > 50.0):  # (10C,20C)
 		if (time_of_day.hour<=4) & (time_of_day.hour >= 0):
-			prop_stp = 67.5+np.random.normal(1.0,0.35)
+			prop_stp = 68.5+np.random.normal(1.0,0.35)
 		elif (time_of_day.hour<=9) & (time_of_day.hour > 4):
 			prop_stp = 69.0+np.random.normal(0.8,0.35)
 		elif (time_of_day.hour<=18) & (time_of_day.hour > 9):
@@ -203,7 +203,7 @@ def initial_learning(time_of_day, oat, prev_setting):
 		elif (time_of_day.hour<=21) & (time_of_day.hour > 18): 
 			prop_stp = 68.5+np.random.normal(1.8,0.35)
 		else:  # (time_of_day.hour<=24) & (time_of_day.hour > 21):
-			prop_stp = 67.5+np.random.normal(1.0,0.35)
+			prop_stp = 68.5+np.random.normal(1.0,0.35)
 	else:   #if (oat<=50.0) :  # (10C)
 		if (time_of_day.hour<=4) & (time_of_day.hour >= 0):
 			prop_stp = 68.5+np.random.normal(1.0,0.35)
