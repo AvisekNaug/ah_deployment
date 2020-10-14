@@ -22,6 +22,11 @@ git clone -b dev_v3 git@github.com:AvisekNaug/ah_deployment.git
 	```
 	("python3 -m venv alumni_v2" might generate an error/warning on some Linux systems and it means an additional prerequisite needs to be fulfilled. I don't remember the exact details of the error as it has been a long time but in case it arises please get back to me with the error log and I will try to send out the fix.)
 
+	Then upgrade pip
+	```bash
+	pip install --upgrade pip
+	```
+
 2. Install necessary packages: 
 
 	i. **On Ubuntu** : ```sudo apt-get update && sudo apt-get install cmake libopenmpi-dev python3-dev zlib1g-dev```
