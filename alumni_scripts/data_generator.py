@@ -535,7 +535,7 @@ def get_train_data(api_args, meta_data_, retrain_range_weeks, log):
 			df_p.dropna(inplace=True)
 			# check whether relearn data has sufficient rows(at least 10 weeks)
 			min_length = 2016*(retrain_range_weeks-3)
-			if (df_p.empty) | (df_p.shape[0]<min_length):
+			if (df_p.empty) | (df_p.shape[0]<min_length) | (df_p.shape[1]!=30):
 				copyfile('data/trend_data/alumni_data_train_old.csv', 'data/trend_data/alumni_data_train.csv')
 				log.info('Deploy Control Module: BdX API data is NaN or very small. Will use backup data')
 			else:
@@ -559,6 +559,7 @@ def get_train_data(api_args, meta_data_, retrain_range_weeks, log):
 		time.sleep(timedelta(seconds=10).seconds)
 		os.remove('data/trend_data/alumni_data_train_wbt.csv')
 		log.info('OnlineDataGen: Wet bulb Augmented Data removed')
+		df_.rename(columns={df_.columns[0]: 'time'}, inplace=True)  # in case 0 col is not time labeled
 		df_['time'] = to_datetime(df_['time'])
 		to_zone = tz.tzlocal()
 		df_['time'] = df_['time'].apply(lambda x: x.astimezone(to_zone)) # convert time to loca timezones

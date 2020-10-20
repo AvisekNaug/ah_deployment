@@ -182,7 +182,7 @@ def get_real_obs(api_args: dict, meta_data_: dict, obs_space_vars : list, scaler
 		df_ = read_csv('data/trend_data/alumni_data_deployment.csv',)
 
 		# if deployment data is not of appropriate shape, reuse old data
-		if (df_.empty) | (df_.shape[0]<period) | (df_.isnull().any().any()):
+		if (df_.empty) | (df_.shape[0]<period) | (df_.isnull().any().any()) |  (df_.shape[1]!=30):
 			log.info('Deploy Control Module: BdX API data is empty or sparse or has NaN, reusing old data')
 			copyfile('data/trend_data/alumni_data_deployment_bakcup.csv','data/trend_data/alumni_data_deployment.csv')
 			df_ = read_csv('data/trend_data/alumni_data_deployment.csv', )
@@ -190,6 +190,7 @@ def get_real_obs(api_args: dict, meta_data_: dict, obs_space_vars : list, scaler
 			copyfile('data/trend_data/alumni_data_deployment.csv','data/trend_data/alumni_data_deployment_bakcup.csv')
 
 		# process data
+		df_.rename(columns={df_.columns[0]: 'time'}, inplace=True)  # in case 0 col is not time labeled
 		df_['time'] = to_datetime(df_['time'])
 		to_zone = tz.tzlocal()
 		df_['time'] = df_['time'].apply(lambda x: x.astimezone(to_zone)) # convert time to loca timezones
