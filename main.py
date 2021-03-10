@@ -34,6 +34,8 @@ _handler.setFormatter(_formatter)
 log.addHandler(_handler)
 # ------------From Ibrahim's controller.py script
 
+OUTPUT_LOC = '/app001/shared/'
+
 with warnings.catch_warnings():
 	from alumni_scripts import deploy_control as dctrl
 	from alumni_scripts import alumni_data_utils as a_utils
@@ -45,7 +47,8 @@ parser.add_argument('--relearn_interval_hours', '-n', type=int, default=168, hel
 parser.add_argument('--relearn_weeks', '-w', type=int, default=2, help='weeks to look into the past to train rl agent')
 parser.add_argument('--num_of_episodes', '-e', type=int, default=60, help='number of episodes to train')
 parser.add_argument('--deploy_interval_mins', '-d', type=int, default=30, help='interval in mins for controller output')
-parser.add_argument('--expert_demo', '-x', type=bool, default=True, help='Use expert heuristics to create some initial data')
+parser.add_argument('--expert_demo', '-x', type=bool, default=True, help='Use expert heuristics to create some initial (few hours) data')
+parser.add_argument('--output_loc', '-l', type=str, default=OUTPUT_LOC, help='Location to write setpoint for BdX')
 
 if __name__ == "__main__":
 	
@@ -133,7 +136,8 @@ if __name__ == "__main__":
 									'end_learning': end_learning,
 									'deploy_interval_mins':args.deploy_interval_mins,
 									'expert_demo':args.expert_demo,
-									'logger':log,})
+									'logger':log,
+									'output_loc':args.output_loc})
 		log.info("Main Thread: Deployment Thread Started")
 		deploy_ctrl_th.start()
 

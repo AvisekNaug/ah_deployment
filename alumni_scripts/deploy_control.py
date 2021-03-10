@@ -42,6 +42,10 @@ def deploy_control(*args, **kwargs):
 		agent_weights_available : Event = kwargs['agent_weights_available']  # deploy loop can read the agent weights now
 		end_learning : Event = kwargs['end_learning']
 		agent_weights_lock : Lock = kwargs['agent_weights_lock']  # prevent data read/write access
+
+		output_loc = kwargs['output_loc']
+		if not output_loc.endswith('/'):
+			output_loc += '/'
 		
 		# check variables if needed
 		obs_space_vars : list = kwargs['obs_space_vars']
@@ -134,7 +138,7 @@ def deploy_control(*args, **kwargs):
 			# 	cfile.seek(0)
 			# 	cfile.write('{}\n'.format(str(stpt_unscaled[0])))
 			# cfile.close()
-			with open('../Alumni_SAT_Setpoint.csv', 'w') as cfile:
+			with open(output_loc+'Alumni_SAT_Setpoint.csv', 'w') as cfile:
 				cfile.write('{}'.format(str(stpt_unscaled[0])))
 			cfile.close()
 

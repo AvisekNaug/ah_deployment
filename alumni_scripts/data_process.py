@@ -140,7 +140,7 @@ def online_data_clean(*args, **kwargs):
 	return df
 
 """
-A time based schedule for optimal control testing of Alumni Hall. It wil help the rl generate some good experiences at initial stages of relearning. Experimental. Stopped after first few rounds of relearning.
+A time based schedule for optimal control testing of Alumni Hall. It wil help the rl generate some good experiences at initial stages of relearning. Experimental. Stopped after first few hours.
 """
 def initial_learning(time_of_day, oat, prev_setting):
 	"""
@@ -182,7 +182,7 @@ def initial_learning(time_of_day, oat, prev_setting):
 			prop_stp = 65.5 + np.random.normal(0.1,0.001)
 		else:  # (time_of_day.hour<=24) & (time_of_day.hour > 21):
 			prop_stp = 65.5 + np.random.normal(0.8,0.35)
-	elif (oat<=75.0) & (oat > 66.0):  # (20C,24C)
+	elif (oat<=75.0) & (oat > 59.0):  # (20C,24C)
 		if (time_of_day.hour<=4) & (time_of_day.hour >= 0):
 			prop_stp = 65.5+np.random.normal(1.0,0.35)
 		elif (time_of_day.hour<=9) & (time_of_day.hour > 4):
@@ -193,7 +193,7 @@ def initial_learning(time_of_day, oat, prev_setting):
 			prop_stp = 66.5+np.random.normal(0.1,0.001)
 		else:  # (time_of_day.hour<=24) & (time_of_day.hour > 21):
 			prop_stp = 65.5+np.random.normal(1.0,0.35)
-	elif (oat<=66.0) & (oat > 50.0):  # (10C,20C)
+	elif (oat<=59.0) & (oat > 50.0):  # (10C,20C)
 		if (time_of_day.hour<=4) & (time_of_day.hour >= 0):
 			prop_stp = 68.5+np.random.normal(1.0,0.35)
 		elif (time_of_day.hour<=9) & (time_of_day.hour > 4):
@@ -216,5 +216,7 @@ def initial_learning(time_of_day, oat, prev_setting):
 		else:  # (time_of_day.hour<=24) & (time_of_day.hour > 21):
 			prop_stp = 68.5+np.random.normal(1.0,0.35)
 
-	delta_change = np.clip(np.array([prop_stp - prev_setting]),a_min=np.array([-0.45389]),a_max=np.array([0.45389]))
+	delta_change = np.clip(np.array([prop_stp - prev_setting]),
+							a_min=np.random.uniform(-0.45,-0.38),
+							a_max=np.random.uniform(0.30,0.61))
 	return delta_change
