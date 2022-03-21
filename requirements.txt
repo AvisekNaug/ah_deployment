@@ -14,4 +14,4 @@ matplotlib==3.2.1
 plotly==4.8.2
 CoolProp==6.4.0
 scikit_learn==0.23.1
-waitress==1.4.4
+waitress==2.1.1
